@@ -1,0 +1,75 @@
+{
+  "acts": [
+    "ACT.UNDERDOCKS",
+    "ACT.HIVE",
+    "ACT.GLORY"
+  ],
+  "ascension": 0,
+  "build_id": "v0.98.2",
+  "game_mode": "daily",
+  "killed_by_encounter": "NONE.NONE",
+  "killed_by_event": "EVENT.NEOW",
+  "map_point_history": [
+    [
+      {
+        "map_point_type": "ancient",
+        "player_stats": [
+          {
+            "current_gold": 99,
+            "current_hp": 0,
+            "damage_taken": 0,
+            "gold_gained": 0,
+            "gold_lost": 0,
+            "gold_spent": 0,
+            "gold_stolen": 0,
+            "hp_healed": 66,
+            "max_hp": 66,
+            "max_hp_gained": 0,
+            "max_hp_lost": 0,
+            "player_id": 1
+          }
+        ],
+        "rooms": [
+          {
+            "model_id": "EVENT.NEOW",
+            "room_type": "event",
+            "turns_taken": 0
+          }
+        ]
+      }
+    ]
+  ],
+  "modifiers": [
+    {
+      "id": "MODIFIER.DRAFT"
+    },
+    {
+      "id": "MODIFIER.ALL_STAR"
+    },
+    {
+      "id": "MODIFIER.MIDAS"
+    }
+  ],
+  "platform_type": "steam",
+  "players": [
+    {
+      "character": "CHARACTER.NECROBINDER",
+      "deck": [],
+      "id": 1,
+      "max_potion_slot_count": 3,
+      "potions": [],
+      "relics": [
+        {
+          "floor_added_to_deck": 1,
+          "id": "RELIC.BOUND_PHYLACTERY"
+        }
+      ]
+    }
+  ],
+  "run_time": 9,
+  "schema_version": 8,
+  "seed": "08_03_2026_1P",
+  "start_time": 1773005169,
+  "was_abandoned": true,
+  "win": false
+}

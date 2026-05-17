@@ -1,0 +1,6 @@
+ERROR: Initializing already initialized RID
+   at: get_or_null (./core/templates/rid_owner.h:246)
+ERROR: Parameter "mem" is null.
+   at: initialize_rid (./core/templates/rid_owner.h:294)
+ERROR: Parameter "shader" is null.
+   at: shader_set_code (servers/rendering/dummy/storage/material_storage.cpp:163)

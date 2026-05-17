@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "fields": {
+    "Nibbit::Butt::api_aliases": {
+      "value": "Empower",
+      "updated_at": "2026-05-16T23:07:12.843951+00:00",
+      "source": "agent",
+      "run_id": "",
+      "previous_value": ""
+    },
+    "Bygone Effigy::Sleep::api_aliases": {
+      "value": "Sleeping",
+      "updated_at": "2026-05-16T23:09:33.638950+00:00",
+      "source": "agent",
+      "run_id": "",
+      "previous_value": ""
+    },
+    "Bygone Effigy::Slash::api_aliases": {
+      "value": "Empower",
+      "updated_at": "2026-05-16T23:09:36.624468+00:00",
+      "source": "agent",
+      "run_id": "",
+      "previous_value": ""
+    },
+    "Shrinker Beetle::Shrinker::api_aliases": {
+      "value": "Strategic",
+      "updated_at": "2026-05-16T23:09:42.662545+00:00",
+      "source": "agent",
+      "run_id": "",
+      "previous_value": ""
+    },
+    "Ceremonial Beast::Plow::move_match": {
+      "value": "Plow",
+      "updated_at": "2026-05-16T23:11:38.353067+00:00",
+      "source": "agent",
+      "run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "previous_value": "",
+      "verified_run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "verified_at": "2026-05-16T23:11:38.353080+00:00"
+    },
+    "Tunneler::Bite::move_match": {
+      "value": "Bite",
+      "updated_at": "2026-05-16T23:13:55.003939+00:00",
+      "source": "agent",
+      "run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "previous_value": "",
+      "verified_run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "verified_at": "2026-05-16T23:13:55.003952+00:00"
+    },
+    "Tunneler::Burrow::move_match": {
+      "value": "Burrow",
+      "updated_at": "2026-05-16T23:14:12.298238+00:00",
+      "source": "agent",
+      "run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "previous_value": "",
+      "verified_run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "verified_at": "2026-05-16T23:14:12.298253+00:00"
+    },
+    "Exoskeleton::Skitter::move_match": {
+      "value": "Skitter",
+      "updated_at": "2026-05-16T23:14:54.843554+00:00",
+      "source": "agent",
+      "run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "previous_value": "",
+      "verified_run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "verified_at": "2026-05-16T23:14:54.843566+00:00"
+    },
+    "Hunter Killer::Tenderizing Goop::move_match": {
+      "value": "Tenderizing Goop",
+      "updated_at": "2026-05-16T23:15:41.485779+00:00",
+      "source": "agent",
+      "run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "previous_value": "",
+      "verified_run_id": "cdb50583-2e4d-47a8-9e07-74083282f3f1",
+      "verified_at": "2026-05-16T23:15:41.485790+00:00"
+    }
+  }
+}

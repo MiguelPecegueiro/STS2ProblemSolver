@@ -1,0 +1,14 @@
+cache/
+logs/
+data/*
+!data/imported_runs/
+data/imported_runs/*
+!data/imported_runs/.gitkeep
+scripts/full_stats.html
+scripts/next_data.json
+models/*.pt
+__pycache__/
+*.pyc
+.Python
+.venv/
+venv/
