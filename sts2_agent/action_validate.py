@@ -287,8 +287,6 @@ def _validate_event(state: dict, action: dict) -> tuple[bool, str]:
         return False, "event options available - advance_dialogue invalid"
 
     if name == "choose_event_option":
-        if event_has_proceed_option(state):
-            return False, "proceed option expected, not choose_event_option"
         idx = int(action.get("index", -1))
         for fallback, option in enumerate(extract_event_options(state)):
             if option.get("is_locked"):
@@ -303,18 +301,34 @@ def _validate_event(state: dict, action: dict) -> tuple[bool, str]:
     return False, f"unexpected event action: {name}"
 
 
+def _potion_at_slot(player: dict, slot: int) -> dict | object | None:
+    from sts2_agent.potions import iter_potion_belt_slots
+
+    for belt_slot, potion in iter_potion_belt_slots(player):
+        if belt_slot == slot:
+            return potion
+    potions = player.get("potions") or []
+    if isinstance(potions, list) and 0 <= slot < len(potions):
+        return potions[slot]
+    return None
+
+
 def _validate_potion_slot(state: dict, action: dict) -> tuple[bool, str]:
+    player = state.get("player") or {}
     slot = int(action.get("slot", -1))
-    potions = (state.get("player") or {}).get("potions") or []
-    if slot < 0 or slot >= len(potions):
-        return False, f"potion slot {slot} out of range"
-    potion = potions[slot]
-    if not potion or (isinstance(potion, dict) and not potion.get("name")):
+    potion = _potion_at_slot(player, slot)
+    if not potion or (isinstance(potion, dict) and not potion.get("name") and not potion.get("id")):
         return False, f"potion slot {slot} empty"
     target = action.get("target")
     if target is not None and str(target) not in _enemy_entity_ids(state):
         if _enemy_entity_ids(state):
             return False, f"potion target {target!r} not a living enemy"
+    from sts2_agent.potions import get_potion_profile, potion_needs_enemy_target
+
+    profile = get_potion_profile(potion)
+    if potion_needs_enemy_target(potion, profile) and _enemy_entity_ids(state):
+        if target is None:
+            return False, "potion requires enemy target"
     return True, "ok"
 
 

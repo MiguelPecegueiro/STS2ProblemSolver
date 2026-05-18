@@ -311,6 +311,70 @@ def _classify_potion_label_fallback(label: str) -> PotionProfile:
     )
 
 
+def potion_needs_enemy_target(
+    potion: object,
+    profile: PotionProfile,
+    kb: KnowledgeBase | None = None,
+) -> bool:
+    """True when API expects use_potion with a single enemy entity_id."""
+    if isinstance(potion, dict):
+        for key in ("requires_target", "needs_target", "requires_target_enemy"):
+            if potion.get(key) is True:
+                return True
+        mode = str(potion.get("target_type") or potion.get("target") or "").lower().replace(
+            " ", ""
+        )
+        if mode in ("enemy", "anyenemy", "singleenemy", "single_enemy"):
+            return True
+        if mode in ("none", "self", "all", "allenemies", "all_enemies", "everyenemy"):
+            return False
+
+    kb = kb or get_knowledge()
+    key = potion_lookup_key(potion)
+    codex = kb.lookup_potion(key) if key else None
+    if codex:
+        desc = _strip_markup(
+            str(codex.get("description") or codex.get("description_raw") or "")
+        )
+        if "all enemies" in desc or "all enemy" in desc or "every enemy" in desc:
+            return False
+        if any(
+            phrase in desc
+            for phrase in (
+                "target",
+                "an enemy",
+                "single enemy",
+                "random enemy",
+                "choose an enemy",
+            )
+        ):
+            if profile.heal or profile.block or profile.defensive:
+                return False
+            return True
+
+    if profile.offensive or profile.debuff:
+        return True
+    if profile.self_damage:
+        return True
+    return False
+
+
+def pick_potion_target(
+    ctx: CombatPotionContext,
+    *,
+    prefer: dict | None = None,
+) -> dict | None:
+    if prefer is not None and int(prefer.get("hp") or 0) > 0:
+        return prefer
+    living = [e for e in ctx.enemies if int(e.get("hp") or 0) > 0]
+    if not living:
+        return None
+    from sts2_agent.scorer import pick_highest_threat_enemy
+
+    target, _ = pick_highest_threat_enemy(living)
+    return target
+
+
 def get_potion_profile(
     potion: object,
     kb: KnowledgeBase | None = None,
@@ -430,15 +494,28 @@ def evaluate_combat_potions(ctx: CombatPotionContext) -> tuple[dict | None, list
         slot: int,
         potion: object,
         *,
+        profile: PotionProfile,
         target: dict | None = None,
         rule: str,
-    ) -> tuple[dict[str, Any], list[str]]:
+    ) -> tuple[dict[str, Any] | None, list[str]]:
+        label = potion_label(potion) if isinstance(potion, dict) else potion_combat_label(potion)
+        need_target = potion_needs_enemy_target(potion, profile, kb)
+        resolved = target
+        if need_target:
+            resolved = pick_potion_target(ctx, prefer=target)
+            if not resolved or not resolved.get("entity_id"):
+                reasons.append(
+                    f"  slot {slot} {label}: skip - needs enemy target (none available)"
+                )
+                return None, reasons
+
         action: dict[str, Any] = {"action": "use_potion", "slot": slot}
-        entity = (target or {}).get("entity_id")
+        entity = (resolved or {}).get("entity_id")
         if entity:
             action["target"] = entity
-        label = potion_label(potion) if isinstance(potion, dict) else potion_combat_label(potion)
         msg = f"potions: USE slot {slot} ({label}) - {rule}"
+        if entity:
+            msg += f" -> {entity}"
         reasons.append(msg)
         logger.info(msg)
         return action, reasons
@@ -456,11 +533,14 @@ def evaluate_combat_potions(ctx: CombatPotionContext) -> tuple[dict | None, list
             continue
 
         if ctx.hp_ratio <= CRITICAL_HEAL_HP_RATIO and profile.heal:
-            return _use_action(
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
                 rule=f"critical HP ({ctx.hp_ratio:.1%}) heal",
             )
+            if action:
+                return action, use_reasons
 
         if (
             ctx.gap > 8
@@ -468,44 +548,59 @@ def evaluate_combat_potions(ctx: CombatPotionContext) -> tuple[dict | None, list
             and (profile.block or profile.defensive)
             and (not ctx.has_playable_cards or ctx.gap > 15)
         ):
-            return _use_action(
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
                 rule=f"incoming {ctx.incoming} vs block {ctx.block} defensive",
             )
+            if action:
+                return action, use_reasons
 
         if ctx.lethal_target and profile.offensive and not profile.self_damage:
-            return _use_action(
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
                 target=ctx.lethal_target,
                 rule="lethal setup offensive",
             )
+            if action:
+                return action, use_reasons
 
         if profile.offensive and not profile.self_damage:
             weak = [e for e in living if int(e.get("hp") or 0) <= 25]
             if weak and not ctx.has_playable_cards:
                 target = min(weak, key=lambda e: int(e.get("hp") or 0))
-                return _use_action(
+                action, use_reasons = _use_action(
                     slot,
                     potion,
+                    profile=profile,
                     target=target,
                     rule="finish low-HP enemy",
                 )
+                if action:
+                    return action, use_reasons
 
         if profile.debuff and ctx.gap > 5 and ctx.hp_ratio < 0.5:
-            return _use_action(
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
                 rule=f"debuff vs incoming gap {ctx.gap}",
             )
+            if action:
+                return action, use_reasons
 
         if (profile.buff or profile.draw) and ctx.incoming == 0 and ctx.has_playable_cards:
-            return _use_action(
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
                 rule="tempo at combat start",
             )
+            if action:
+                return action, use_reasons
 
     if ctx.hp_ratio <= EMERGENCY_HP_RATIO:
         reasons.append(
@@ -531,11 +626,16 @@ def evaluate_combat_potions(ctx: CombatPotionContext) -> tuple[dict | None, list
 
         if best:
             slot, potion, score = best
-            return _use_action(
+            profile = get_potion_profile(potion, kb)
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
+                target=ctx.lethal_target,
                 rule=f"emergency best score={score}",
             )
+            if action:
+                return action, use_reasons
 
         for slot, potion in belt:
             if not _usable(slot, potion):
@@ -545,11 +645,15 @@ def evaluate_combat_potions(ctx: CombatPotionContext) -> tuple[dict | None, list
             if profile.passive or profile.self_damage:
                 reasons.append(f"  slot {slot} {label}: emergency fallback skip")
                 continue
-            return _use_action(
+            action, use_reasons = _use_action(
                 slot,
                 potion,
+                profile=profile,
+                target=ctx.lethal_target,
                 rule="emergency fallback (any survivable)",
             )
+            if action:
+                return action, use_reasons
 
         reasons.append("potions: emergency - no usable survivable potion")
         logger.warning(

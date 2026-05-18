@@ -464,15 +464,30 @@ def extract_event_options(state: dict) -> list[dict]:
     return options
 
 
+def _is_real_event_choice(option: dict) -> bool:
+    if option.get("is_proceed"):
+        return False
+    label = event_option_label(option).lower()
+    if any(k in label for k in ("proceed", "continue", "leave", "exit", "done", "next")):
+        return False
+    return True
+
+
 def event_has_choosable_options(state: dict) -> bool:
-    """True when real event choices exist (not only Proceed/Continue)."""
+    """True when real (non-proceed) event options exist on screen."""
     for option in extract_event_options(state):
-        if option.get("is_proceed"):
+        if _is_real_event_choice(option):
+            return True
+    return False
+
+
+def event_has_unchosen_choices(state: dict) -> bool:
+    """True when the player still needs to pick a real event option."""
+    for option in extract_event_options(state):
+        if option.get("was_chosen") or option.get("is_locked"):
             continue
-        label = event_option_label(option).lower()
-        if any(k in label for k in ("proceed", "continue", "leave", "exit")):
-            continue
-        return True
+        if _is_real_event_choice(option):
+            return True
     return False
 
 
@@ -486,10 +501,12 @@ def event_in_dialogue(state: dict) -> bool:
     if screen.get("in_dialogue"):
         return True
     # Heuristic: narrative showing but no real choices yet (common on Ancients)
-    if event_has_choosable_options(state):
+    if event_has_unchosen_choices(state):
         return False
     options = extract_event_options(state)
-    if options:
+    if event_has_proceed_option(state) and not event_has_unchosen_choices(state):
+        return False
+    if options and not event_has_proceed_option(state):
         return False
     if screen.get("body") or screen.get("dialogue") or screen.get("is_ancient"):
         return True

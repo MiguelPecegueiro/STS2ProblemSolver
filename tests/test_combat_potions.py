@@ -10,7 +10,10 @@ from sts2_agent.potions import (
     emergency_potion_score,
     evaluate_combat_potions,
     get_potion_profile,
+    is_potion_slot_failed,
+    mark_potion_use_failed,
     player_hp_ratio,
+    potion_needs_enemy_target,
 )
 
 
@@ -105,6 +108,74 @@ def test_emergency_logs_scores_for_each_slot() -> None:
 def test_emergency_threshold_constants() -> None:
     assert CRITICAL_HEAL_HP_RATIO == 0.35
     assert EMERGENCY_HP_RATIO == 0.25
+
+
+def test_offensive_potion_includes_enemy_target() -> None:
+    clear_potion_use_failures(_ctx().player)
+    ctx = _ctx(
+        player={
+            "hp": 10,
+            "max_hp": 80,
+            "potions": [
+                {
+                    "slot": 0,
+                    "name": "Fire Potion",
+                    "id": "FIRE_POTION",
+                    "description": "Deal 20 damage to an enemy.",
+                }
+            ],
+        },
+        hp=10,
+        hp_ratio=10 / 80,
+        enemies=[{"hp": 50, "entity_id": "BOSS_0", "name": "Boss"}],
+        lethal_target={"hp": 50, "entity_id": "BOSS_0"},
+    )
+    profile = get_potion_profile(ctx.player["potions"][0])
+    assert potion_needs_enemy_target(ctx.player["potions"][0], profile)
+    action, reasons = evaluate_combat_potions(ctx)
+    assert action == {"action": "use_potion", "slot": 0, "target": "BOSS_0"}
+    assert any("lethal setup" in r or "emergency" in r for r in reasons)
+
+
+def test_debuff_potion_includes_target() -> None:
+    clear_potion_use_failures(_ctx().player)
+    ctx = _ctx(
+        hp=35,
+        max_hp=80,
+        hp_ratio=35 / 80,
+        gap=8,
+        incoming=12,
+        block=4,
+        player={
+            "hp": 35,
+            "max_hp": 80,
+            "potions": [
+                {
+                    "slot": 0,
+                    "name": "Weak Potion",
+                    "id": "WEAK_POTION",
+                    "description": "Apply 3 Weak to an enemy.",
+                }
+            ],
+        },
+        enemies=[{"hp": 40, "entity_id": "SLIME_0"}],
+    )
+    action, _ = evaluate_combat_potions(ctx)
+    assert action == {"action": "use_potion", "slot": 0, "target": "SLIME_0"}
+
+
+def test_failed_potion_slot_skipped() -> None:
+    player = {
+        "hp": 10,
+        "max_hp": 80,
+        "potions": [{"slot": 0, "name": "Fire Potion", "id": "FIRE_POTION"}],
+    }
+    mark_potion_use_failed(player, 0)
+    assert is_potion_slot_failed(player, 0)
+    ctx = _ctx(player=player, hp=10, hp_ratio=10 / 80)
+    action, reasons = evaluate_combat_potions(ctx)
+    assert action is None
+    assert any("blocked after API reject" in r for r in reasons)
 
 
 def test_unclassified_potion_gets_emergency_fallback() -> None:

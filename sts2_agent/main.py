@@ -27,9 +27,6 @@ from sts2_agent.graceful_shutdown import (
 )
 from sts2_agent.menu import IN_RUN_STATE_TYPES, MenuFlow
 from sts2_agent.state_parse import (
-    event_has_proceed_option,
-    event_in_dialogue,
-    extract_event_options,
     extract_shop_items,
     is_card_select_active,
     treasure_can_proceed,
@@ -226,33 +223,11 @@ def run(
             and decision_action.get("action") == "proceed"
             and treasure_can_proceed(state)
         )
-        stuck_event_dialogue = (
-            not skip_dedup
-            and str(state_type) == "event"
-            and isinstance(decision_action, dict)
-            and decision_action.get("action") == "advance_dialogue"
-            and (
-                event_in_dialogue(state)
-                or not extract_event_options(state)
-            )
-        )
-        stuck_event_proceed = (
-            not skip_dedup
-            and str(state_type) == "event"
-            and isinstance(decision_action, dict)
-            and decision_action.get("action") == "choose_event_option"
-            and event_has_proceed_option(state)
-        )
         stuck_card_select = (
             not skip_dedup
             and is_card_select_active(state)
             and isinstance(decision_action, dict)
             and decision_action.get("action") in ("select_card", "confirm_selection")
-        )
-        stuck_use_potion = (
-            not skip_dedup
-            and isinstance(decision_action, dict)
-            and decision_action.get("action") == "use_potion"
         )
         if (
             not skip_dedup
@@ -260,11 +235,8 @@ def run(
             and fingerprint == last_fingerprint
             and not stuck_leaving_shop
             and not stuck_rewards
-            and not stuck_event_dialogue
-            and not stuck_event_proceed
             and not stuck_card_select
             and not stuck_treasure
-            and not stuck_use_potion
         ):
             time.sleep(interval)
             continue
@@ -309,6 +281,25 @@ def run(
                     state.get("player") or {},
                     int(decision_action["slot"]),
                 )
+                last_action_key = None
+            elif (
+                isinstance(decision_action, dict)
+                and decision_action.get("action") == "choose_event_option"
+                and decision_action.get("index") is not None
+            ):
+                from sts2_agent.event import mark_event_option_failed
+
+                mark_event_option_failed(state, int(decision_action["index"]))
+                last_action_key = None
+            elif (
+                isinstance(decision_action, dict)
+                and decision_action.get("action") == "choose_map_node"
+                and decision_action.get("index") is not None
+            ):
+                from sts2_agent.map import mark_map_choice_failed
+
+                mark_map_choice_failed(state, int(decision_action["index"]))
+                last_action_key = None
             elif (
                 isinstance(decision_action, dict)
                 and str(state_type) == "card_reward"
@@ -331,6 +322,16 @@ def run(
                 from sts2_agent.combat import sync_hand_select_after_action
 
                 sync_hand_select_after_action(state, new_state, decision_action)
+            elif isinstance(decision_action, dict) and str(state_type) == "event":
+                from sts2_agent.event import clear_event_session
+
+                if str(new_state.get("state_type") or "").lower() != "event":
+                    clear_event_session(state)
+            elif isinstance(decision_action, dict) and str(state_type) == "map":
+                from sts2_agent.map import clear_map_session
+
+                if str(new_state.get("state_type") or "").lower() != "map":
+                    clear_map_session(state)
             elif isinstance(decision_action, dict):
                 action_name = str(decision_action.get("action") or "")
                 if action_name == "claim_reward" and str(state_type) == "rewards":
