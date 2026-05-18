@@ -40,11 +40,12 @@ def test_load_decision_rows_min_game_version(tmp_path: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
-    rows, scores = load_decision_rows(
+    rows, scores, _meta = load_decision_rows(
         decisions,
         runs_path=runs,
         min_run_score_percentile=0.0,
         min_game_version="2026.05.18",
+        clean_only=False,
     )
     assert len(rows) == 1
     assert rows[0]["run_id"] == "new"

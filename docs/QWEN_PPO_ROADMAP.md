@@ -170,10 +170,11 @@ Combat stays on the learned policy; Qwen never blocks the hot path for every car
 
 | Call Qwen | Do not call Qwen |
 |-----------|------------------|
-| Card rewards | Every combat step |
+| Card rewards | Every combat **decision** (card play / end turn) |
 | Rest sites | Map nodes (unless explicitly added later) |
-| Shop | Hand selection / targeting |
-| Boss prep / pre-boss deck checks | Fast reactive fights |
+| Shop | Hand selection / targeting mid-fight |
+| Boss prep / pre-boss deck checks | — |
+| **Combat start** (once per fight — [combat strategy](#combat-strategy-guidance)) | — |
 
 **Rationale**
 
@@ -182,6 +183,153 @@ Combat stays on the learned policy; Qwen never blocks the hot path for every car
 - **Persistence** — one Qwen response can **persist** (cached feature vector + summary) across several downstream decisions until the next strategic moment (e.g. shop → multiple purchases without re-querying).
 
 Exact trigger list is an [open decision](#open-questions-decide-at-integration-time).
+
+**Exception — combat strategy (once per fight):** see [Combat strategy guidance](#combat-strategy-guidance). Qwen is **not** called every card play; it **is** called once at fight start to set per-fight reward shaping. That is separate from shop/map/reward strategic moments above.
+
+---
+
+## Combat strategy guidance
+
+Per-enemy combat strategy via Qwen at **fight start**, distilled into **dynamic reward multipliers** for the duration of that fight. PPO still chooses every card play; Qwen only answers “how hard should we press this fight?”
+
+This addresses a gap the dashboard and Phase B diagnostics surfaced: a **static** `combat_turn_shaping()` formula cannot encode that different enemies need opposite tempos.
+
+### Diagnostic context (why this exists)
+
+Agent losses cluster on **scaling** encounters where passive play is catastrophic:
+
+| Enemy | Pattern | Strategic need |
+|-------|---------|----------------|
+| **Kin Follower** | Spawns additional enemies over time | Kill fast before the fight scales |
+| **Bygone Effigy** | Gains strength per turn | Burst damage within ~3 turns |
+| **Birdonis** | General scaling mechanics | Aggressive early pressure |
+
+These share a pattern: **long fights get worse**. The current passive PPO style (high block, low damage) is especially punished here. Win-rate and death charts on `ppo_v4` / `ppo_v5` runs show these labels repeatedly in fatal fights and low win-rate buckets.
+
+A single global reward formula (e.g. fixed weights on `damage_dealt`, `hp_lost`, `block_applied`) cannot express “be greedy vs Kin” vs “survive one more turn vs this boss telegraph” without per-fight context.
+
+### Design principle
+
+| Layer | Responsibility |
+|-------|----------------|
+| **Qwen** | High-level fight plan — aggression, focus target, tempo |
+| **PPO** | Card selection, targeting, sequencing — already trained for execution |
+| **Reward shaping** | Bridge — turn Qwen’s plan into multipliers on existing combat step rewards |
+
+Qwen does **not** need to know *how* to play cards. It only needs outputs like “high aggression — kill within 3 turns” or “conserve HP — boss hits hard next turn.” PPO handles the rest under those incentives.
+
+### Architecture
+
+```mermaid
+sequenceDiagram
+  participant Game as STS2 state
+  participant Agent as sts2_agent
+  participant Qwen as LM Studio Qwen
+  participant PPO as PPO policy
+
+  Game->>Agent: combat start (enemy names, hand, deck, HP)
+  Agent->>Qwen: one strategy prompt per fight
+  Qwen->>Agent: text plan
+  Agent->>Agent: parse → reward multipliers
+  loop Each combat decision
+    Agent->>PPO: state + features
+    PPO->>Agent: action
+    Agent->>Agent: immediate_reward × fight multipliers
+  end
+  Game->>Agent: fight ends
+  Agent->>Agent: reset multipliers to defaults
+```
+
+#### 1. Trigger
+
+- At **combat start**, the agent reads enemy names from game state (Phase B / `combat_summary` path already identifies encounters).
+- **One Qwen call per fight** — before the first combat decision.
+- **Never mid-fight** — solves latency; no blocking the ~0.5s decision loop.
+
+#### 2. Input to Qwen
+
+| Input | Source |
+|-------|--------|
+| Enemy names and room type (`monster` / `elite` / `boss`) | Current `state_type` + `battle.enemies` |
+| Hand composition | Player hand in state JSON |
+| Deck composition and size | Run deck snapshot |
+| Current HP, max HP, block | `player` fields |
+| Enemy patterns (scaling, spawn, strength gain) | `cache/expert_knowledge.json` (Mobalytics + curated notes) |
+
+Prompt builder retrieves relevant enemy entries from the knowledge base (RAG-style), same source of truth as [Knowledge base requirements](#knowledge-base-requirements).
+
+#### 3. Qwen output
+
+Free-form **fight strategy** (short), then a structured parse into multipliers applied to `combat_turn_shaping()` for this fight only:
+
+| Field | Example values |
+|-------|----------------|
+| Strategy summary | “High aggression — kill back line before Kin Follower spawns” |
+| `damage_dealt` multiplier | e.g. `1.5` when burst is required |
+| `hp_lost` multiplier | e.g. `1.2` when trading HP for speed is acceptable |
+| `block_applied` multiplier | e.g. `0.5` when turtling is wrong |
+
+Example strategy phrases Qwen might emit:
+
+- “High aggression — kill within 3 turns”
+- “Target back enemy first”
+- “Conserve HP — boss hits hard next turn”
+
+Parser maps text → bounded multiplier tuple; invalid or missing output → **default multipliers** (today’s static behavior).
+
+#### 4. Integration with PPO
+
+- Modified weights apply **only for the current fight** (from combat start until `_end_combat`).
+- PPO inference unchanged — same action space and feature vector.
+- Step rewards in `sts2_agent` use `combat_turn_shaping(..., multipliers=fight_weights)` so online play matches training semantics once Phase 1 lands.
+- When the fight ends, multipliers **reset** to defaults; the next fight may trigger a new Qwen call.
+
+#### 5. Why this works
+
+| Property | Benefit |
+|----------|---------|
+| **Separation of concerns** | Qwen = strategy; PPO = execution |
+| **One call per fight** | Latency acceptable (~seconds once per encounter, not per card) |
+| **Per-enemy nuance** | Scaling fights get “kill fast”; others can keep balanced weights |
+| **Grounded patterns** | `expert_knowledge.json` already holds Mobalytics enemy data — extend with scaling/spawn notes |
+| **Measurable** | Dashboard win rate per enemy (`enemy_fight_win_rates`) tracks Kin / Effigy / Birdonis after rollout |
+
+Static global shaping optimized for average fights **hurts** on the enemies listed above; dynamic shaping is the minimal LLM surface area that fixes that without retraining PPO for every encounter type.
+
+#### 6. Known enemies needing strategy adjustment
+
+From diagnostic data (deaths + low win rate):
+
+| Enemy | Mechanism | Qwen priority hint |
+|-------|-----------|-------------------|
+| **Kin Follower** | Spawns over time | Kill fast before fight scales |
+| **Bygone Effigy** | Strength per turn | Burst within ~3 turns |
+| **Birdonis** | Scaling | Aggressive early pressure |
+
+Use these as **regression fixtures** in Phase 5 — if win rate vs these labels does not move after integration, prompts or parser mapping need revision.
+
+#### 7. Prerequisites
+
+| Prerequisite | Status / notes |
+|--------------|----------------|
+| LM Studio + **Qwen 14B Q4** | Same as [Integration phases](#integration-phases) phase 1 |
+| `expert_knowledge.json` with enemy patterns | Extend scrape with scaling/spawn/strength behaviors |
+| Enemy names at combat start | Implemented (Phase B logging, `format_enemy_label`, compendium) |
+| `combat_turn_shaping()` accepts dynamic multipliers | **Not yet** — currently hardcoded in `sts2_agent/scorer.py`; refactor required |
+
+#### 8. Implementation phases (combat strategy track)
+
+Separate from the main [Integration phases](#integration-phases) table (feature-dim BC/PPO). Can start **in parallel** once PPO plateau is confirmed, but Phase 4 wiring needs Phase 1 code.
+
+| Phase | Work | Exit criteria |
+|-------|------|----------------|
+| **CS-1** | Refactor `combat_turn_shaping()` to accept per-fight multiplier dict (defaults = current constants) | Unit tests; offline recalc tools still work |
+| **CS-2** | Prompt template: enemies + deck + HP + knowledge snippets → strategy question | Golden prompts for Kin / Effigy / Birdonis |
+| **CS-3** | Parser: Qwen text → multiplier tuple + safe fallback | Invalid JSON / hallucination → defaults |
+| **CS-4** | Wire into combat-start handler in `sts2_agent` (before first combat action) | One HTTP call per fight logged in `decisions.jsonl` metadata |
+| **CS-5** | Evaluate on scaling enemies | Win rate vs Kin Follower, Bygone Effigy, Birdonis improves vs static shaping baseline |
+
+**Relationship to main roadmap:** CS-1–CS-5 do **not** require expanding PPO feature dimensions (unlike phases 5–6 in the main table). They shape rewards during play and can be A/B tested with `agent_version` tags before a full `bc_v*` retrain on relabeled combat rewards.
 
 ---
 
@@ -320,3 +468,4 @@ Each lap is one turn of the [self-improving system](#long-term-vision--self-impr
 |------|------|
 | 2026-05-18 | Initial roadmap (post–`ppo_v3`, pre-Qwen) |
 | 2026-05-18 | Added self-improving system vision, knowledge loop, five components |
+| 2026-05-18 | Added [Combat strategy guidance](#combat-strategy-guidance) — per-fight Qwen → reward multipliers (Kin / Effigy / Birdonis) |

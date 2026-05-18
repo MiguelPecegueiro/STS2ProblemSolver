@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from training.actions import action_to_key, build_action_vocab, encode_action
 from training.features import encode_snapshot
@@ -83,6 +86,31 @@ def load_run_game_versions(runs_path: Path) -> dict[str, str]:
     return versions
 
 
+def run_has_combat_summary(value: object) -> bool:
+    """True when a run row has non-empty combat_summary (Phase B agent logging)."""
+    return isinstance(value, list) and len(value) > 0
+
+
+def load_phase_b_run_ids(runs_path: Path) -> set[str]:
+    """Run ids with Phase B combat_summary on the run record."""
+    ids: set[str] = set()
+    if not runs_path.exists():
+        return ids
+    with runs_path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            rid = row.get("run_id")
+            if rid and run_has_combat_summary(row.get("combat_summary")):
+                ids.add(str(rid))
+    return ids
+
+
 def _run_score_for_row(row: dict, run_scores: dict[str, float]) -> float | None:
     outcome = row.get("run_outcome") or {}
     if outcome.get("run_score") is not None:
@@ -100,11 +128,14 @@ def load_decision_rows(
     min_run_score: float | None = None,
     min_run_score_percentile: float = 25.0,
     min_game_version: str | None = None,
-) -> tuple[list[dict], dict[str, float]]:
-    """Load rows with valid actions; return (rows, run_id -> score)."""
+    clean_only: bool = True,
+) -> tuple[list[dict], dict[str, float], dict[str, Any]]:
+    """Load rows with valid actions; return (rows, run_id -> score, filter_meta)."""
     runs_file = runs_path or DEFAULT_RUNS_PATH
     run_scores = load_run_scores(runs_file)
     run_game_versions = load_run_game_versions(runs_file)
+    run_sources = load_run_sources(runs_file)
+    phase_b_run_ids = load_phase_b_run_ids(runs_file) if clean_only else set()
 
     # Fill run scores from decision outcomes
     for line in decisions_path.open(encoding="utf-8"):
@@ -134,6 +165,9 @@ def load_decision_rows(
         allowed_runs = {rid for rid, sc in run_scores.items() if sc >= min_run_score}
 
     rows: list[dict] = []
+    discarded_phase_b = 0
+    kept_human = 0
+    kept_agent_phase_b = 0
     with decisions_path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -158,15 +192,47 @@ def load_decision_rows(
                 continue
             if not action_to_key(row.get("action_taken"), snapshot=row.get("state_snapshot")):
                 continue
+            if clean_only:
+                source = _run_source_for_row(row, run_sources).lower()
+                if source == "human":
+                    kept_human += 1
+                elif rid in phase_b_run_ids:
+                    kept_agent_phase_b += 1
+                else:
+                    discarded_phase_b += 1
+                    continue
             rows.append(row)
 
-    return rows, run_scores
+    filter_meta: dict[str, Any] = {
+        "clean_only": clean_only,
+        "rows_kept": len(rows),
+        "rows_discarded_phase_b": discarded_phase_b,
+        "kept_human": kept_human if clean_only else None,
+        "kept_agent_phase_b": kept_agent_phase_b if clean_only else None,
+        "phase_b_run_count": len(phase_b_run_ids) if clean_only else None,
+    }
+    if clean_only:
+        logger.info(
+            "Phase B filter: kept %d decisions (%d human, %d agent Phase B), "
+            "discarded %d agent decisions (no combat_summary on run), "
+            "%d Phase B runs in runs.jsonl",
+            len(rows),
+            kept_human,
+            kept_agent_phase_b,
+            discarded_phase_b,
+            len(phase_b_run_ids),
+        )
+
+    return rows, run_scores, filter_meta
 
 
 def _run_source_for_row(row: dict, run_sources: dict[str, str]) -> str:
     rid = str(row.get("run_id") or "")
     if rid and rid in run_sources:
         return str(run_sources[rid])
+    row_source = row.get("source")
+    if row_source is not None:
+        return str(row_source)
     return ""
 
 
@@ -289,13 +355,15 @@ def build_datasets(
     human_weight: float = 3.0,
     val_fraction: float = 0.2,
     seed: int = 42,
+    clean_only: bool = True,
 ) -> tuple[DecisionDataset, DecisionDataset, dict[str, int], dict[str, Any]]:
-    rows, run_scores = load_decision_rows(
+    rows, run_scores, filter_meta = load_decision_rows(
         decisions_path,
         runs_path=runs_path,
         min_run_score=min_run_score,
         min_run_score_percentile=min_run_score_percentile,
         min_game_version=min_game_version,
+        clean_only=clean_only,
     )
     if not rows:
         raise ValueError(f"No training rows after filtering: {decisions_path}")
@@ -333,6 +401,8 @@ def build_datasets(
         "min_run_score_used": min_run_score,
         "min_run_score_percentile": min_run_score_percentile,
         "min_game_version": min_game_version,
+        "clean_only": clean_only,
+        "filter": filter_meta,
         "run_score_min": float(min(run_scores.values())) if run_scores else 0.0,
         "run_score_max": float(max(run_scores.values())) if run_scores else 0.0,
     }

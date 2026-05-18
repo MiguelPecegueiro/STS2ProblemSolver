@@ -38,7 +38,7 @@ LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 
 # Logged on each run/decision row - bump when rules or model checkpoint changes.
 AGENT_VERSION_RULES = "rules_v1"
-AGENT_VERSION = "ppo_v4"
+AGENT_VERSION = "ppo_v5"
 
 
 def _record_training_data(state: dict, action: dict, reasons: list[str]) -> None:

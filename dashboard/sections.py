@@ -157,23 +157,59 @@ def section_death(
             st.plotly_chart(fig, use_container_width=True)
 
     with c2:
-        st.markdown("**Death category**")
-        if "cause_of_death" in losses.columns and not losses.empty:
-            cats = losses["cause_of_death"].apply(m.parse_death_category)
-            cat_df = cats.value_counts().reset_index()
-            cat_df.columns = ["category", "count"]
+        st.markdown("**Death category** (room type of fatal fight)")
+        cat_df = m.death_category_counts(runs)
+        if not cat_df.empty:
             fig = px.bar(cat_df, x="category", y="count", template=PLOTLY_TEMPLATE)
             fig.update_layout(height=CHART_HEIGHT)
             st.plotly_chart(fig, use_container_width=True)
+            unknown_n = int(cat_df.loc[cat_df["category"] == "Unknown", "count"].sum())
+            if unknown_n:
+                st.caption(
+                    f"{unknown_n} loss(es) could not be classified "
+                    "(no `combat_summary` / `cause_of_death`)."
+                )
         else:
-            st.caption("No cause_of_death data.")
+            st.caption("No losses yet.")
 
     enemy_df = m.death_enemy_counts(runs)
     if not enemy_df.empty:
-        st.markdown("**Enemy killer** (parsed from cause_of_death)")
+        st.markdown("**Fatal fight enemies** (top killers)")
         fig = px.bar(enemy_df, x="enemy", y="deaths", template=PLOTLY_TEMPLATE)
-        fig.update_layout(height=280, xaxis_tickangle=-35)
+        fig.update_layout(height=320, xaxis_tickangle=-35)
         st.plotly_chart(fig, use_container_width=True)
+        st.caption(
+            "Uses `killing_enemy` when present, else the last lost fight in `combat_summary` "
+            "(multi-enemy fights show all names)."
+        )
+    elif not losses.empty:
+        st.caption("No enemy labels on losses (need Phase B `combat_summary` or `killing_enemy`).")
+
+    win_df = m.enemy_fight_win_rates(runs, min_fights=3, top_n=20)
+    if not win_df.empty:
+        st.markdown("**Win rate per encounter**")
+        fig = px.bar(
+            win_df,
+            x="enemy",
+            y="win_rate",
+            template=PLOTLY_TEMPLATE,
+            hover_data={"fights": True, "wins": True, "win_rate": ":.1f"},
+            text=win_df["win_rate"].map(lambda v: f"{v:.0f}%"),
+        )
+        fig.update_layout(
+            height=360,
+            yaxis_title="Fight win %",
+            yaxis_range=[0, 100],
+            xaxis_tickangle=-35,
+        )
+        fig.update_traces(textposition="outside")
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(
+            "Share of fights won vs each enemy group (`combat_summary.won_fight`). "
+            "Shown when ≥3 fights; sorted by win rate (worst first)."
+        )
+    elif m.combat_summary_fights(runs).empty:
+        st.caption("Win rate per encounter needs Phase B `combat_summary` on runs.")
 
     st.markdown("**Act reached (all runs)**")
     act_df = agent["act_reached"].value_counts().sort_index().reset_index()

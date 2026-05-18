@@ -1126,7 +1126,7 @@ def combat_turn_shaping(
 ) -> float:
     """Small per-action signal during combat (before end-of-combat payout)."""
     return (
-        -float(hp_lost_this_turn) * 2.0
-        + float(block_applied) * 0.15
-        + float(damage_dealt) * 0.25
+        -float(hp_lost_this_turn) * 0.5
+        + float(block_applied) * 0.3
+        + float(damage_dealt) * 1.0
     )

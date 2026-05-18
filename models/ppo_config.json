@@ -290,97 +290,202 @@
     "seed": 42
   },
   "dataset_meta": {
-    "num_transitions": 88598,
-    "num_runs": 498,
-    "num_train": 70467,
-    "num_val": 18131,
+    "num_transitions": 10463,
+    "num_runs": 59,
+    "num_train": 8651,
+    "num_val": 1812,
     "gamma": 0.99,
     "reward_stats": {
       "raw": {
-        "step_reward_mean": 0.7970488667488098,
-        "step_reward_std": 23.300405502319336,
-        "return_mean": 56.776023864746094,
-        "return_std": 89.21556854248047
+        "step_reward_mean": 3.6517934799194336,
+        "step_reward_std": 20.945165634155273,
+        "return_mean": 225.2619171142578,
+        "return_std": 66.43608093261719
       },
-      "reward_scale": 89.21556854248047,
-      "step_reward_mean": 0.008933966979384422,
-      "step_reward_std": 0.2611697316169739,
-      "return_mean": 0.6363914012908936,
-      "return_std": 1.0
+      "reward_scale": 66.43608093261719,
+      "step_reward_mean": 0.05496701970696449,
+      "step_reward_std": 0.3152679204940796,
+      "return_mean": 3.3906564712524414,
+      "return_std": 0.9999999403953552
     },
-    "reward_scale": 89.21556854248047,
-    "terminal_reward_scale": 1.0
+    "reward_scale": 66.43608093261719,
+    "terminal_reward_scale": 1.0,
+    "clean_only": true,
+    "filter": {
+      "clean_only": true,
+      "rows_kept": 10463,
+      "rows_discarded_phase_b": 84079,
+      "kept_human": 0,
+      "kept_agent_phase_b": 10463,
+      "phase_b_run_count": 137
+    }
   },
   "history": [
     {
       "epoch": 1,
-      "policy_loss": 0.045089911592936995,
-      "value_loss": 0.40080318327291287,
-      "entropy": 0.8950461682634078,
-      "clip_fraction": 0.3020807984487518,
-      "val_value_mean": -0.19689764082431793
+      "policy_loss": 0.035244154918473214,
+      "value_loss": 0.8069903804537129,
+      "entropy": 0.9862376613652005,
+      "clip_fraction": 0.3071044284631224,
+      "val_value_mean": 0.5101097822189331
     },
     {
       "epoch": 2,
-      "policy_loss": 0.049363701098996716,
-      "value_loss": 0.2673466618348291,
-      "entropy": 0.8854644099871317,
-      "clip_fraction": 0.3105897039337003,
-      "val_value_mean": -0.006379892583936453
+      "policy_loss": 0.03639865873436279,
+      "value_loss": 0.5645508710294962,
+      "entropy": 0.9869986058158033,
+      "clip_fraction": 0.3065772376516286,
+      "val_value_mean": 1.261803150177002
     },
     {
       "epoch": 3,
-      "policy_loss": 0.05472264678552376,
-      "value_loss": 0.20166899882041026,
-      "entropy": 0.8715243583032186,
-      "clip_fraction": 0.322782423671173,
-      "val_value_mean": 0.15197356045246124
+      "policy_loss": 0.041128642905010455,
+      "value_loss": 0.4002293389947975,
+      "entropy": 0.9975916550439947,
+      "clip_fraction": 0.3169449013383949,
+      "val_value_mean": 1.8617199659347534
     },
     {
       "epoch": 4,
-      "policy_loss": 0.06186700605304804,
-      "value_loss": 0.165779298218642,
-      "entropy": 0.8514319620486619,
-      "clip_fraction": 0.3328336451229626,
-      "val_value_mean": 0.2856175899505615
+      "policy_loss": 0.040222148493151456,
+      "value_loss": 0.30887703422237844,
+      "entropy": 1.0039015548194157,
+      "clip_fraction": 0.3155973527361365,
+      "val_value_mean": 2.316211462020874
     },
     {
       "epoch": 5,
-      "policy_loss": 0.06983591170316777,
-      "value_loss": 0.14588905223037885,
-      "entropy": 0.8303310441906038,
-      "clip_fraction": 0.34175879901032086,
-      "val_value_mean": 0.39597800374031067
+      "policy_loss": 0.03946704846663017,
+      "value_loss": 0.25972478705293994,
+      "entropy": 1.008121310349773,
+      "clip_fraction": 0.32681409707840753,
+      "val_value_mean": 2.672865390777588
     },
     {
       "epoch": 6,
-      "policy_loss": 0.07966321017411773,
-      "value_loss": 0.13347876069905318,
-      "entropy": 0.8122804658352465,
-      "clip_fraction": 0.35312065900559875,
-      "val_value_mean": 0.47749775648117065
+      "policy_loss": 0.04558452502276529,
+      "value_loss": 0.23849296263035605,
+      "entropy": 1.012993210378815,
+      "clip_fraction": 0.33317434590528994,
+      "val_value_mean": 2.915783405303955
     },
     {
       "epoch": 7,
-      "policy_loss": 0.0954689587632184,
-      "value_loss": 0.1243975118841922,
-      "entropy": 0.8039224627765192,
-      "clip_fraction": 0.370932309847811,
-      "val_value_mean": 0.5450426936149597
+      "policy_loss": 0.04502563285025056,
+      "value_loss": 0.22599099171073997,
+      "entropy": 1.0146895252606447,
+      "clip_fraction": 0.34189846454297795,
+      "val_value_mean": 3.1041014194488525
     },
     {
       "epoch": 8,
-      "policy_loss": 0.11274515525555993,
-      "value_loss": 0.1187671228662889,
-      "entropy": 0.7962196115134419,
-      "clip_fraction": 0.39006030267995334,
-      "val_value_mean": 0.5874425768852234
+      "policy_loss": 0.0494182066177018,
+      "value_loss": 0.22049043316613226,
+      "entropy": 1.0135307482936804,
+      "clip_fraction": 0.346011006656815,
+      "val_value_mean": 3.2367310523986816
+    },
+    {
+      "epoch": 9,
+      "policy_loss": 0.052099867463659716,
+      "value_loss": 0.2168608086512369,
+      "entropy": 1.0150752181515974,
+      "clip_fraction": 0.3554568647900048,
+      "val_value_mean": 3.3357231616973877
+    },
+    {
+      "epoch": 10,
+      "policy_loss": 0.056958507236285025,
+      "value_loss": 0.21459094708894982,
+      "entropy": 1.0125166445093996,
+      "clip_fraction": 0.3669758314157234,
+      "val_value_mean": 3.408709764480591
+    },
+    {
+      "epoch": 11,
+      "policy_loss": 0.051878756069687795,
+      "value_loss": 0.21249676506747217,
+      "entropy": 1.0068625294986893,
+      "clip_fraction": 0.3780764124410994,
+      "val_value_mean": 3.4631729125976562
+    },
+    {
+      "epoch": 12,
+      "policy_loss": 0.06008748995030627,
+      "value_loss": 0.20983491071006832,
+      "entropy": 0.9976301254595027,
+      "clip_fraction": 0.38884732236756997,
+      "val_value_mean": 3.500523567199707
+    },
+    {
+      "epoch": 13,
+      "policy_loss": 0.07406875005621902,
+      "value_loss": 0.20811681668548024,
+      "entropy": 0.9885821460801012,
+      "clip_fraction": 0.40569012480623584,
+      "val_value_mean": 3.5312628746032715
+    },
+    {
+      "epoch": 14,
+      "policy_loss": 0.07504693790414262,
+      "value_loss": 0.20671381253529997,
+      "entropy": 0.9717183279640534,
+      "clip_fraction": 0.41708415593294534,
+      "val_value_mean": 3.564878463745117
+    },
+    {
+      "epoch": 15,
+      "policy_loss": 0.09019426316680278,
+      "value_loss": 0.20271948363412828,
+      "entropy": 0.9540573884459103,
+      "clip_fraction": 0.43317366676295505,
+      "val_value_mean": 3.5788657665252686
+    },
+    {
+      "epoch": 16,
+      "policy_loss": 0.10024704252068392,
+      "value_loss": 0.20072567265699892,
+      "entropy": 0.9340162123827374,
+      "clip_fraction": 0.45280636496403637,
+      "val_value_mean": 3.586683988571167
+    },
+    {
+      "epoch": 17,
+      "policy_loss": 0.09698900208219557,
+      "value_loss": 0.19831238029634252,
+      "entropy": 0.9052085311097258,
+      "clip_fraction": 0.46766364136162925,
+      "val_value_mean": 3.5909011363983154
+    },
+    {
+      "epoch": 18,
+      "policy_loss": 0.097237523056238,
+      "value_loss": 0.19462292005910592,
+      "entropy": 0.8721543699502945,
+      "clip_fraction": 0.47773997792426276,
+      "val_value_mean": 3.6024081707000732
+    },
+    {
+      "epoch": 19,
+      "policy_loss": 0.12305448636385229,
+      "value_loss": 0.19401476154213443,
+      "entropy": 0.830786918016041,
+      "clip_fraction": 0.49925944274839235,
+      "val_value_mean": 3.6348626613616943
+    },
+    {
+      "epoch": 20,
+      "policy_loss": 0.12466409371635938,
+      "value_loss": 0.19364894532105503,
+      "entropy": 0.7851806747562745,
+      "clip_fraction": 0.516546523088918,
+      "val_value_mean": 3.6281373500823975
     }
   ],
-  "best_val_value_mean": 0.5874425768852234,
-  "best_entropy_at_save": 0.8950461682634078,
+  "best_val_value_mean": 3.6348626613616943,
+  "best_entropy_at_save": 1.0150752181515974,
   "entropy_stop_threshold": 0.8,
-  "early_stop_epoch": 8,
+  "early_stop_epoch": 20,
   "early_stop_reason": "entropy_below_threshold",
   "bc_init": "models\\bc_v4.pt"
 }

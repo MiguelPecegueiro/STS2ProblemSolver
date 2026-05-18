@@ -7,20 +7,124 @@ import pytest
 
 from dashboard.metrics import (
     damage_mitigation_rate,
+    death_category_counts,
+    death_enemy_counts,
+    enemy_fight_win_rates,
     early_version_warnings,
     human_tier_miss_rate,
     incoming_damage_from_snapshot,
+    parse_death_category,
     parse_death_enemy,
+    parse_encounter_death_category,
+    parse_encounter_death_enemy,
     parse_intent_damage_value,
     pick_rate_table,
     potion_hoard_death_rate,
+    resolve_death_category,
+    resolve_death_enemy,
     tier_rank,
 )
 
 
 def test_parse_death_enemy():
-    cause = "elite combat vs Jaw Worm - hp reached 0"
+    cause = "elite combat - vs Jaw Worm - hp reached 0"
     assert parse_death_enemy(cause) == "Jaw Worm"
+
+
+def test_parse_encounter_death_ids():
+    assert parse_encounter_death_category("ENCOUNTER.JAW_WORM_NORMAL") == "Monster"
+    assert parse_encounter_death_category("ENCOUNTER.INFESTED_PRISMS_ELITE") == "Elite"
+    assert parse_encounter_death_category("ENCOUNTER.QUEEN_BOSS") == "Boss"
+    assert parse_encounter_death_category("EVENT.BRAIN_LEECH") == "Event"
+    assert parse_encounter_death_enemy("ENCOUNTER.HUNTER_KILLER_NORMAL") == "Hunter Killer"
+
+
+def test_resolve_death_from_combat_summary():
+    run = {
+        "won": False,
+        "cause_of_death": "game_over - hp reached 0",
+        "combat_summary": [
+            {"state_type": "monster", "enemy_names": ["Slime"], "won_fight": True},
+            {
+                "state_type": "elite",
+                "enemy_names": ["Phrog Parasite"],
+                "won_fight": False,
+            },
+        ],
+    }
+    assert resolve_death_category(run) == "Elite"
+    assert resolve_death_enemy(run) == "Phrog Parasite"
+
+
+def test_death_charts_use_combat_summary_not_cause_string():
+    runs = pd.DataFrame(
+        [
+            {
+                "source": "agent",
+                "agent_version": "ppo_v4",
+                "won": False,
+                "cause_of_death": "game_over - hp reached 0",
+                "combat_summary": [
+                    {
+                        "state_type": "monster",
+                        "enemy_names": ["Mawler"],
+                        "won_fight": False,
+                    }
+                ],
+            },
+            {
+                "source": "agent",
+                "agent_version": "ppo_v4",
+                "won": False,
+                "cause_of_death": "game_over - hp reached 0",
+                "combat_summary": [
+                    {
+                        "state_type": "boss",
+                        "enemy_names": ["Kin Priest"],
+                        "won_fight": False,
+                    }
+                ],
+            },
+        ]
+    )
+    cats = death_category_counts(runs)
+    assert set(cats["category"]) == {"Monster", "Boss"}
+    enemies = death_enemy_counts(runs)
+    assert enemies["deaths"].sum() == 2
+    assert "Mawler" in enemies["enemy"].values
+
+
+def test_game_over_cause_is_unknown_without_summary():
+    assert parse_death_category("game_over - hp reached 0") == "Unknown"
+
+
+def test_enemy_fight_win_rates():
+    runs = pd.DataFrame(
+        [
+            {
+                "source": "agent",
+                "combat_summary": [
+                    {"enemy_names": ["Mawler"], "won_fight": True},
+                    {"enemy_names": ["Mawler"], "won_fight": True},
+                    {"enemy_names": ["Mawler"], "won_fight": False},
+                    {"enemy_names": ["Slime"], "won_fight": False},
+                ],
+            },
+            {
+                "source": "agent",
+                "combat_summary": [
+                    {"enemy_names": ["Mawler"], "won_fight": True},
+                    {"enemy_names": ["Slime"], "won_fight": True},
+                ],
+            },
+        ]
+    )
+    rates = enemy_fight_win_rates(runs, min_fights=3)
+    mawler = rates.loc[rates["enemy"] == "Mawler"].iloc[0]
+    assert mawler["fights"] == 4
+    assert mawler["wins"] == 3
+    assert mawler["win_rate"] == 75.0
+    assert "Slime" not in rates["enemy"].values
 
 
 def test_parse_intent_damage_value():

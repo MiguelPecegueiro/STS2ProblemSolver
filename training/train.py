@@ -99,6 +99,7 @@ def train(
     val_fraction: float,
     seed: int,
     device_name: str,
+    clean_only: bool = True,
 ) -> dict:
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -110,7 +111,15 @@ def train(
         human_weight=human_weight,
         val_fraction=val_fraction,
         seed=seed,
+        clean_only=clean_only,
     )
+    filt = meta.get("filter") or {}
+    if clean_only and filt:
+        print(
+            f"Phase B filter: kept {filt.get('rows_kept')} decisions "
+            f"({filt.get('kept_human')} human, {filt.get('kept_agent_phase_b')} agent Phase B), "
+            f"discarded {filt.get('rows_discarded_phase_b')} agent (no combat_summary)"
+        )
 
     device = torch.device(device_name if torch.cuda.is_available() else "cpu")
     if device_name == "cuda" and not torch.cuda.is_available():
@@ -274,6 +283,7 @@ def main() -> int:
         val_fraction=args.val_fraction,
         seed=args.seed,
         device_name=args.device,
+        clean_only=args.clean_only,
     )
     return 0
 

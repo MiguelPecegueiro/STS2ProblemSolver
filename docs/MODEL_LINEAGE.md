@@ -20,13 +20,15 @@ flowchart LR
   fail --> bc_v3
   bc_v3 --> ppo_v3["ppo_v3"]
   bc_v3 --> bc_v4["bc_v4"]
-  bc_v4 --> ppo_v4["ppo_v4<br/>(deploy)"]
+  bc_v4 --> ppo_v4["ppo_v4"]
+  bc_v4 --> ppo_v5["ppo_v5<br/>(deploy)"]
 
   style bc_v1 fill:#999,color:#fff
   style fail fill:#f96,color:#000
   style ppo_v3 fill:#ccc,color:#000
+  style ppo_v4 fill:#ccc,color:#000
   style bc_v4 fill:#9cf,color:#000
-  style ppo_v4 fill:#9f9,color:#000
+  style ppo_v5 fill:#9f9,color:#000
 ```
 
 | Version | Type | Parent init | Role | Artifact status |
@@ -38,7 +40,8 @@ flowchart LR
 | **bc_v3** | BC | Fresh train on expanded data (post-collapse) | Reset BC after ppo_v2-collapse; superseded on disk by bc_v4 | `models/bc_v3.pt` (frozen copy); metrics in [bc_v3 eval](#bc_v3-full-evaluation) |
 | **ppo_v3** | PPO | `bc_v3.pt` (bc_v3 actor) | Healthy PPO fine-tune; superseded by ppo_v4 for deploy | `models/ppo_v3.pt` (see [ppo_v3](#ppo_v3-successful)) |
 | **bc_v4** | BC | Fresh train on expanded data + updated run-score filter | BC base for ppo_v4 | `models/policy_net.pt`, `models/bc_v4.pt`, `models/model_config.json` (see [bc_v4](#bc_v4)) |
-| **ppo_v4** | PPO | `bc_v4.pt` (bc_v4 actor) | **Current deploy** — offline PPO on post–run-score dataset | `models/ppo_v4.pt` (see [ppo_v4](#ppo_v4-successful)) |
+| **ppo_v4** | PPO | `bc_v4.pt` (bc_v4 actor) | Offline PPO on updated run-score dataset; superseded by ppo_v5 | `models/ppo_v4.pt` (see [ppo_v4](#ppo_v4-successful)) |
+| **ppo_v5** | PPO | `bc_v4.pt` (bc_v4 actor) | **Current deploy** — aggression-aligned rewards + Phase B training filter | `models/ppo_v5.pt`; live weights in `ppo_v1.pt` (see [ppo_v5](#ppo_v5-successful)) |
 
 ---
 
@@ -226,6 +229,53 @@ Both runs show the same healthy profile (clip ~30–40%, no ppo_v2-style thrashi
 
 ---
 
+## ppo_v5 (successful)
+
+**Goal:** Offline PPO from **bc_v4** with **relabeled combat rewards** (damage-first `combat_turn_shaping`) and **`--clean-only`** training data (agent decisions only from Phase B runs with `combat_summary`). Skipped bc_v5 retrain — same passive demonstrations, new reward labels.
+
+**Command:**
+
+```bash
+py -m training.train_ppo --start-from models/bc_v4.pt --lr 1e-5 --epochs 50 --device cuda
+```
+
+**Outcome:** Best PPO training run so far on entropy — policy stayed exploratory for **20 epochs** before `entropy_stop` (0.80). Log + `models/ppo_config.json` (`bc_init`: `models\bc_v4.pt`).
+
+**Dataset (PPO):** Phase B filter → **10 463** train transitions from **137** Phase B runs (`clean_only`; **84 079** agent decisions discarded). Same score-percentile gate as prior PPO runs. Reward normalization: `return_std` ≈ **66.4**.
+
+### ppo_v3 vs ppo_v4 vs ppo_v5
+
+| Metric | **ppo_v3** | **ppo_v4** | **ppo_v5** |
+|--------|----------:|----------:|----------:|
+| BC init | bc_v3 | bc_v4 | bc_v4 |
+| Training filter | all agent runs | score percentile | **Phase B + score percentile** |
+| Step reward | old shaping | old shaping | **damage-first shaping (relabeled)** |
+| Starting entropy (epoch 1) | 0.951 | 0.895 | **0.986** |
+| Best saved entropy | 0.951 (epoch 1) | 0.895 (epoch 1) | **1.015 (epoch 9)** |
+| Clip fraction (epoch 1) | 30.5% | 30.2% | **30.7%** |
+| Epochs completed | 10 | 8 | **20** |
+| Early stop | entropy 0.781 | entropy 0.796 | entropy **0.785** (epoch 20) |
+
+Entropy **rose** through epoch 9 before decay — unlike ppo_v3/ppo_v4, the best checkpoint is **not** epoch 1. `train_ppo.py` saves the actor at **maximum epoch entropy** (`best_entropy_at_save` ≈ **1.015**).
+
+### ppo_v5 training log (selected epochs)
+
+| Epoch | Entropy | Clip fraction | Val value mean |
+|------:|--------:|--------------:|---------------:|
+| 1 | 0.986 | 30.7% | 0.510 |
+| 2 | 0.987 | 30.7% | 1.262 |
+| 9 | **1.015** | 35.5% | 3.336 |
+| 15 | 0.954 | 43.3% | 3.579 |
+| 20 | 0.785 | 51.7% | 3.628 |
+
+Full per-epoch history in `models/ppo_config.json` → `history`.
+
+**Deploy:** `models/ppo_v1.pt` holds the **epoch-9** actor (highest entropy). Copy to `models/ppo_v5.pt` for lineage; set `AGENT_VERSION = ppo_v5` in `sts2_agent/main.py`. Inference loads **`ppo_v1.pt` first** — no need to touch `policy_net.pt`.
+
+**Collection goal:** ~150 runs; dashboard check that damage/turn nudges above the old ~8 passive baseline before training **bc_v6** on new data.
+
+---
+
 ## Artifacts on disk
 
 | Path | Typical version | Written by |
@@ -234,11 +284,12 @@ Both runs show the same healthy profile (clip ~30–40%, no ppo_v2-style thrashi
 | `models/bc_v3.pt` | bc_v3 actor (frozen) | Manual copy before bc_v4 train |
 | `models/bc_v4.pt` | bc_v4 actor for PPO `--start-from` | Manual copy of `policy_net.pt` after bc_v4 train |
 | `models/model_config.json` | **bc_v4** metadata | `training/train.py` |
-| `models/ppo_v1.pt` | **Default PPO output** — currently ppo_v4 epoch-1 weights (2026-05-18) | `python training/train_ppo.py` (default `--model-out`) |
+| `models/ppo_v1.pt` | **Inference default** — **ppo_v5** epoch-9 actor (best entropy) | `training/train_ppo.py` (default `--model-out`) |
 | `models/ppo_v2.pt` | Historical play checkpoint | Manual copy / rename |
 | `models/ppo_v3.pt` | ppo_v3 deploy (frozen) | Copy from bc_v3 PPO run |
-| `models/ppo_v4.pt` | **ppo_v4 deploy** | `Copy-Item models/ppo_v1.pt models/ppo_v4.pt` after train |
-| `models/ppo_config.json` | **ppo_v4** metadata (last PPO run) | `training/train_ppo.py` |
+| `models/ppo_v4.pt` | ppo_v4 deploy (frozen) | `Copy-Item models/ppo_v1.pt` after ppo_v4 train |
+| `models/ppo_v5.pt` | **ppo_v5 lineage copy** | `Copy-Item models/ppo_v1.pt models/ppo_v5.pt` after train |
+| `models/ppo_config.json` | **ppo_v5** metadata (last PPO run) | `training/train_ppo.py` |
 
 **Pitfall:** `train_ppo.py` defaults to `--model-out models/ppo_v1.pt`, so repeated experiments overwrite the same file unless you pass `--model-out`. Name checkpoints when you copy them (e.g. `ppo_v2.pt`).
 
@@ -250,7 +301,8 @@ Runs and decisions are tagged with `agent_version` (`sts2_agent/main.py` → `se
 
 | `agent_version` | Intended checkpoint |
 |-----------------|---------------------|
-| **`ppo_v4`** | `models/ppo_v4.pt` (current deploy; `AGENT_VERSION` in `main.py`) |
+| **`ppo_v5`** | `models/ppo_v1.pt` at runtime (copy in `ppo_v5.pt`; `AGENT_VERSION` in `main.py`) |
+| `ppo_v4` | `models/ppo_v4.pt` (historical play runs) |
 | `ppo_v3` | `models/ppo_v3.pt` (historical play runs) |
 | `ppo_v2` | `models/ppo_v2.pt` (historical play runs) |
 | **`bc_v4`** | `models/policy_net.pt` / `bc_v4.pt` with `--policy` |
@@ -270,7 +322,19 @@ python training/train.py
 # then: copy models\policy_net.pt models\bc_v4.pt
 ```
 
-**PPO from bc_v4 (ppo_v4 — shipped):**
+**PPO from bc_v4 (ppo_v5 — current deploy):**
+
+```bash
+python training/train_ppo.py \
+  --start-from models/bc_v4.pt \
+  --model-out models/ppo_v1.pt \
+  --lr 1e-5 \
+  --epochs 50 \
+  --device cuda
+# Copy-Item models/ppo_v1.pt models/ppo_v5.pt
+```
+
+**PPO from bc_v4 (ppo_v4 — previous):**
 
 ```bash
 python training/train_ppo.py \
@@ -309,6 +373,7 @@ Useful flags: `--entropy-stop`, `--entropy-coef`, `--lr`. The value/critic head 
 | 2026-05-18 | **ppo_v3** from `bc_v3.pt`: 10 epochs, best epoch 1 entropy 0.95, clip 30–42% — deploy candidate (see [ppo_v3](#ppo_v3-successful)) |
 | 2026-05-18 | **bc_v4** BC train → `policy_net.pt` / `model_config.json` (train 72.0%, val 64.4%; 1265 runs; see [bc_v4](#bc_v4)) |
 | 2026-05-18 | **ppo_v4** from `bc_v4.pt`: 8 epochs, best epoch 1 entropy 0.895, clip 30–39% — deploy (`ppo_v4.pt`; see [ppo_v4](#ppo_v4-successful)) |
+| 2026-05-18 | **ppo_v5** from `bc_v4.pt`: 20 epochs, best epoch **9** entropy **1.015**, clip 30.7–52% — deploy via `ppo_v1.pt` (see [ppo_v5](#ppo_v5-successful)) |
 
 ---
 

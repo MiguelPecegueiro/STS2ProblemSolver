@@ -294,12 +294,14 @@ def build_ppo_dataset(
     seed: int = 42,
     terminal_reward_scale: float = 1.0,
     vocab: dict[str, int] | None = None,
+    clean_only: bool = True,
 ) -> PPODataset:
-    rows, run_scores = load_decision_rows(
+    rows, run_scores, filter_meta = load_decision_rows(
         decisions_path,
         runs_path=runs_path or DEFAULT_RUNS_PATH,
         min_run_score_percentile=min_run_score_percentile,
         min_game_version=min_game_version,
+        clean_only=clean_only,
     )
     if not rows:
         raise ValueError(f"No PPO rows after filtering: {decisions_path}")
@@ -359,6 +361,8 @@ def build_ppo_dataset(
         "reward_stats": reward_stats,
         "reward_scale": reward_scale,
         "terminal_reward_scale": terminal_reward_scale,
+        "clean_only": clean_only,
+        "filter": filter_meta,
     }
 
     return PPODataset(

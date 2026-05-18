@@ -98,6 +98,7 @@ def train_ppo(
     terminal_reward_scale: float,
     max_grad_norm: float,
     entropy_stop_threshold: float,
+    clean_only: bool = True,
 ) -> dict:
     logger = _setup_logging(log_path)
     torch.manual_seed(seed)
@@ -119,6 +120,7 @@ def train_ppo(
         seed=seed,
         terminal_reward_scale=terminal_reward_scale,
         vocab=vocab,
+        clean_only=clean_only,
     )
     vocab = dataset.vocab
     num_actions = len(vocab)
@@ -126,6 +128,16 @@ def train_ppo(
     device = torch.device(device_name if torch.cuda.is_available() else "cpu")
     if device_name == "cuda" and not torch.cuda.is_available():
         device = torch.device("cpu")
+    filt = dataset.meta.get("filter") or {}
+    if clean_only and filt:
+        logger.info(
+            "Phase B filter: kept %d decisions (%d human, %d agent Phase B), "
+            "discarded %d agent (no combat_summary)",
+            filt.get("rows_kept"),
+            filt.get("kept_human"),
+            filt.get("kept_agent_phase_b"),
+            filt.get("rows_discarded_phase_b"),
+        )
     logger.info(
         "PPO dataset: %d transitions, %d runs (train=%d val=%d) device=%s",
         len(dataset),
@@ -410,6 +422,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val-fraction", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument(
+        "--clean-only",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Keep agent decisions only from Phase B runs (combat_summary); always keep human",
+    )
     return parser.parse_args()
 
 
@@ -438,6 +456,7 @@ def main() -> int:
         terminal_reward_scale=args.terminal_reward_scale,
         max_grad_norm=args.max_grad_norm,
         entropy_stop_threshold=args.entropy_stop,
+        clean_only=args.clean_only,
     )
     return 0
 

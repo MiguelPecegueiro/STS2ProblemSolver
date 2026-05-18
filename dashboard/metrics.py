@@ -225,6 +225,9 @@ def parse_death_enemy(cause: str | None) -> str | None:
 def parse_death_category(cause: str | None) -> str:
     if not cause or not isinstance(cause, str):
         return "Unknown"
+    imported = parse_encounter_death_category(cause)
+    if imported:
+        return imported
     lower = cause.lower()
     if "elite" in lower:
         return "Elite"
@@ -238,7 +241,113 @@ def parse_death_category(cause: str | None) -> str:
         return "Shop"
     if "interrupt" in lower:
         return "Interrupted"
+    if lower.startswith("game_over"):
+        return "Unknown"
     return "Other"
+
+
+def parse_encounter_death_category(cause: str) -> str | None:
+    """Map imported game ids (ENCOUNTER.* / EVENT.*) to room type."""
+    if not cause or not isinstance(cause, str):
+        return None
+    upper = cause.strip().upper()
+    if upper.startswith("EVENT."):
+        return "Event"
+    if "_BOSS" in upper or upper.endswith("BOSS"):
+        return "Boss"
+    if "_ELITE" in upper or ".ELITE" in upper:
+        return "Elite"
+    if upper.startswith("ENCOUNTER."):
+        return "Monster"
+    return None
+
+
+def parse_encounter_death_enemy(cause: str) -> str | None:
+    """Human-readable label from ENCOUNTER.SLUG_NORMAL style ids."""
+    if not cause or not isinstance(cause, str):
+        return None
+    upper = cause.strip().upper()
+    if not upper.startswith(("ENCOUNTER.", "EVENT.")):
+        return None
+    slug = cause.split(".", 1)[-1]
+    for suffix in ("_NORMAL", "_WEAK", "_ELITE", "_BOSS", "_HARD"):
+        if slug.upper().endswith(suffix):
+            slug = slug[: -len(suffix)]
+            break
+    slug = slug.strip("_")
+    if not slug:
+        return None
+    return slug.replace("_", " ").title()
+
+
+def last_fatal_combat_fight(run: dict[str, Any]) -> dict[str, Any] | None:
+    """Last lost fight in combat_summary; on losses this is usually the fatal fight."""
+    summary = run.get("combat_summary")
+    if not isinstance(summary, list) or not summary:
+        return None
+    for fight in reversed(summary):
+        if isinstance(fight, dict) and fight.get("won_fight") is False:
+            return fight
+    last = summary[-1]
+    return last if isinstance(last, dict) else None
+
+
+def category_from_combat_state_type(state_type: object) -> str | None:
+    st = str(state_type or "").lower()
+    if st == "monster":
+        return "Monster"
+    if st == "elite":
+        return "Elite"
+    if st == "boss":
+        return "Boss"
+    return None
+
+
+def resolve_death_category(run: dict[str, Any]) -> str:
+    """Room type where the run ended (monster / elite / boss / …)."""
+    fight = last_fatal_combat_fight(run)
+    if fight:
+        cat = category_from_combat_state_type(fight.get("state_type"))
+        if cat:
+            return cat
+
+    killing = run.get("killing_enemy")
+    if isinstance(killing, dict) and killing.get("name"):
+        cause = run.get("cause_of_death")
+        if isinstance(cause, str):
+            cat = parse_death_category(cause)
+            if cat not in ("Unknown", "Other"):
+                return cat
+
+    cause = run.get("cause_of_death")
+    if isinstance(cause, str) and cause.strip():
+        return parse_death_category(cause)
+
+    return "Unknown"
+
+
+def resolve_death_enemy(run: dict[str, Any]) -> str | None:
+    """Enemy label for a loss (single fight or encounter group)."""
+    killing = run.get("killing_enemy")
+    if isinstance(killing, dict):
+        name = str(killing.get("name") or "").strip()
+        if name:
+            return name
+
+    fight = last_fatal_combat_fight(run)
+    if fight:
+        label = format_enemy_label(fight.get("enemy_names"))
+        if label != "Unknown":
+            return label
+
+    cause = run.get("cause_of_death")
+    if isinstance(cause, str) and cause.strip():
+        enemy = parse_death_enemy(cause)
+        if enemy:
+            return enemy
+        return parse_encounter_death_enemy(cause)
+
+    return None
 
 
 def format_enemy_label(enemy_names: object) -> str:
@@ -259,6 +368,7 @@ def combat_summary_fights(runs: pd.DataFrame) -> pd.DataFrame:
         for fight in summary:
             if not isinstance(fight, dict):
                 continue
+            won = fight.get("won_fight")
             rows.append(
                 {
                     "run_id": run.get("run_id"),
@@ -267,9 +377,40 @@ def combat_summary_fights(runs: pd.DataFrame) -> pd.DataFrame:
                     "damage_taken": fight.get("damage_taken"),
                     "damage_dealt": fight.get("damage_dealt"),
                     "state_type": fight.get("state_type"),
+                    "won_fight": bool(won) if won is not None else None,
                 }
             )
     return pd.DataFrame(rows)
+
+
+def enemy_fight_win_rates(
+    runs: pd.DataFrame,
+    *,
+    min_fights: int = 3,
+    top_n: int = 20,
+) -> pd.DataFrame:
+    """Per-enemy fight win % from combat_summary (won_fight), grouped by encounter label."""
+    fights = combat_summary_fights(runs)
+    if fights.empty or "won_fight" not in fights.columns:
+        return pd.DataFrame()
+
+    fights = fights[fights["enemy"] != "Unknown"].copy()
+    fights = fights[fights["won_fight"].notna()]
+    if fights.empty:
+        return pd.DataFrame()
+
+    agg = (
+        fights.groupby("enemy", as_index=False)
+        .agg(fights=("enemy", "count"), wins=("won_fight", "sum"))
+        .astype({"wins": int})
+    )
+    agg["win_rate"] = (100.0 * agg["wins"] / agg["fights"]).round(1)
+    agg = agg[agg["fights"] >= max(1, min_fights)].sort_values(
+        ["win_rate", "fights"], ascending=[True, False]
+    )
+    if top_n > 0:
+        agg = agg.head(top_n)
+    return agg.reset_index(drop=True)
 
 
 def aggregate_combat_by_enemy(runs: pd.DataFrame) -> pd.DataFrame:
@@ -773,19 +914,36 @@ def energy_waste_rate(decisions: pd.DataFrame) -> float | None:
     return 100.0 * wasted / total
 
 
-def death_enemy_counts(runs: pd.DataFrame) -> pd.DataFrame:
+def death_category_counts(runs: pd.DataFrame) -> pd.DataFrame:
+    """Death room-type counts for agent losses (combat_summary-first)."""
     agent = agent_runs_only(runs)
     deaths = agent[agent["won"] == False]  # noqa: E712
-    if deaths.empty or "cause_of_death" not in deaths.columns:
+    if deaths.empty:
         return pd.DataFrame()
     counter: Counter[str] = Counter()
-    for cause in deaths["cause_of_death"]:
-        enemy = parse_death_enemy(cause)
+    for _, row in deaths.iterrows():
+        counter[resolve_death_category(row.to_dict())] += 1
+    if not counter:
+        return pd.DataFrame()
+    order = ["Monster", "Elite", "Boss", "Event", "Shop", "Interrupted", "Other", "Unknown"]
+    items = sorted(counter.items(), key=lambda kv: (-kv[1], order.index(kv[0]) if kv[0] in order else 99))
+    return pd.DataFrame(items, columns=["category", "count"])
+
+
+def death_enemy_counts(runs: pd.DataFrame, *, top_n: int = 15) -> pd.DataFrame:
+    """Top enemies on agent losses (killing_enemy → combat_summary → cause_of_death)."""
+    agent = agent_runs_only(runs)
+    deaths = agent[agent["won"] == False]  # noqa: E712
+    if deaths.empty:
+        return pd.DataFrame()
+    counter: Counter[str] = Counter()
+    for _, row in deaths.iterrows():
+        enemy = resolve_death_enemy(row.to_dict())
         if enemy:
             counter[enemy] += 1
     if not counter:
         return pd.DataFrame()
-    return pd.DataFrame(counter.most_common(12), columns=["enemy", "deaths"])
+    return pd.DataFrame(counter.most_common(top_n), columns=["enemy", "deaths"])
 
 
 def incoming_damage_from_snapshot(snap: dict) -> int:
