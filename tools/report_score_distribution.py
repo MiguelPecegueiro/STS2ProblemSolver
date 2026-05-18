@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from sts2_agent.scorer import damage_efficiency_penalty, run_score  # noqa: E402
+from sts2_agent.scorer import damage_efficiency_penalty, deck_quality_score, run_score  # noqa: E402
 
 RUNS_PATH = PROJECT_ROOT / "data" / "runs.jsonl"
 
@@ -70,18 +70,33 @@ def main() -> int:
             by_pen[ver].append(damage_efficiency_penalty(rd.get("combat_summary")))
 
     print("=== AGENT RUNS: avg / min / max by version ===")
-    print("BEFORE (stored run_score):")
+    print("BEFORE (stored run_score on disk):")
     for ver in sorted(by_ver_before):
         s = _stats(by_ver_before[ver])
         assert s is not None
         print(f"  {ver:20s} n={s['n']:4d}  avg={s['avg']:7.1f}  min={s['min']:7.0f}  max={s['max']:7.0f}")
 
     print()
-    print("AFTER (new formula with damage penalty):")
+    print("AFTER (hp*50 + deck quality + damage penalty):")
     for ver in sorted(by_ver_after):
         s = _stats(by_ver_after[ver])
         assert s is not None
         print(f"  {ver:20s} n={s['n']:4d}  avg={s['avg']:7.1f}  min={s['min']:7.0f}  max={s['max']:7.0f}")
+
+    print()
+    print("=== AVG DECK SCORE (runs with final_deck) ===")
+    by_deck: dict[str, list[float]] = defaultdict(list)
+    for row in rows:
+        if row.get("source") == "human":
+            continue
+        deck = row.get("final_deck")
+        if not isinstance(deck, list) or not deck:
+            continue
+        ver = str(row.get("agent_version") or "unknown")
+        by_deck[ver].append(deck_quality_score(deck))
+    for ver in sorted(by_deck):
+        vals = by_deck[ver]
+        print(f"  {ver:20s} n={len(vals):4d}  avg_deck={sum(vals) / len(vals):6.1f}")
 
     print()
     print("=== AVG PENALTY (runs with combat_summary only) ===")

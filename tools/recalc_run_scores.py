@@ -44,6 +44,7 @@ def _run_data_from_row(row: dict) -> dict:
         "bosses_killed": row.get("bosses_killed"),
         "won": _run_won(row),
         "combat_summary": row.get("combat_summary"),
+        "final_deck": row.get("final_deck"),
     }
 
 

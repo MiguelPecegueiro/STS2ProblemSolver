@@ -1,6 +1,8 @@
-"""Run score damage efficiency penalty."""
+"""Run score components: damage efficiency penalty, deck quality, HP weight."""
 
-from sts2_agent.scorer import damage_efficiency_penalty, run_score
+from unittest.mock import MagicMock
+
+from sts2_agent.scorer import damage_efficiency_penalty, deck_quality_score, run_score
 
 
 def test_damage_efficiency_penalty_missing_summary():
@@ -28,6 +30,7 @@ def test_run_score_includes_penalty():
         "avg_hp_pct_after_combat": 0.5,
         "bosses_killed": 0,
         "won": False,
+        "final_deck": [],
     }
     without = run_score(base)
     with_penalty = run_score(
@@ -37,3 +40,28 @@ def test_run_score_includes_penalty():
         }
     )
     assert with_penalty == without - 60.0  # 5 dpt -> -60
+
+
+def test_deck_quality_score_with_mock_kb():
+    kb = MagicMock()
+    kb.expert_card_tier.side_effect = lambda name: {
+        "BASH": "S",
+        "ANGER": "A",
+        "UNKNOWN_CARD": None,
+    }.get(str(name).upper())
+
+    deck = ["BASH", "ANGER", "STRIKE", "UNKNOWN_CARD"]
+    # tiers: S=4, A=3, D=0 (starter), C=1 (default) -> mean 2.0 * 25 = 50
+    assert deck_quality_score(deck, kb=kb) == 50.0
+
+
+def test_hp_conservation_halved():
+    base = {
+        "floors_reached": 0,
+        "act_reached": 1,
+        "avg_hp_pct_after_combat": 0.8,
+        "bosses_killed": 0,
+        "won": False,
+        "final_deck": [],
+    }
+    assert run_score(base) == 40.0  # 0.8 * 50

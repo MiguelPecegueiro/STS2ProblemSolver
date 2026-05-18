@@ -1011,6 +1011,58 @@ def combat_reward(hp_before: int, hp_after: int, max_hp: int, won_combat: bool) 
     return -50.0
 
 
+DECK_TIER_VALUES: dict[str, int] = {"S": 4, "A": 3, "B": 2, "C": 1, "D": 0}
+DECK_QUALITY_MULTIPLIER = 25.0  # ~50-75 pts for a strong 20-card deck; below floor_score at 12 floors
+
+
+def _is_starter_card(card_id: str) -> bool:
+    """Basic strikes/defends still in the final deck indicate weak deck building."""
+    upper = str(card_id).upper().replace(" ", "_")
+    if upper in ("STRIKE", "DEFEND", "SETUP_STRIKE"):
+        return True
+    if upper.endswith("_STRIKE") or upper.endswith("_DEFEND"):
+        # STRIKE_IRONCLAD, IRONCLAD_STRIKE — not PERFECTED_STRIKE (no _STRIKE suffix alone)
+        parts = upper.split("_")
+        if len(parts) == 2 and parts[-1] in ("STRIKE", "DEFEND"):
+            return True
+    return False
+
+
+def _card_tier_value(card_id: str, kb: KnowledgeBase) -> int:
+    if _is_starter_card(card_id):
+        return DECK_TIER_VALUES["D"]
+    tier = kb.expert_card_tier(card_id)
+    if tier:
+        letter = str(tier).strip().upper()[:1]
+        return DECK_TIER_VALUES.get(letter, DECK_TIER_VALUES["C"])
+    return DECK_TIER_VALUES["C"]
+
+
+def deck_quality_score(final_deck: object, kb: KnowledgeBase | None = None) -> float:
+    """Mean expert tier value of final_deck * multiplier (Mobalytics tiers in expert_knowledge.json)."""
+    if not isinstance(final_deck, list) or not final_deck:
+        return 0.0
+
+    if kb is None:
+        from sts2_agent.knowledge import get_knowledge
+
+        kb = get_knowledge()
+
+    values: list[int] = []
+    for card in final_deck:
+        if isinstance(card, dict):
+            card = card.get("name") or card.get("id")
+        if not card:
+            continue
+        values.append(_card_tier_value(str(card), kb))
+
+    if not values:
+        return 0.0
+
+    mean_tier = sum(values) / len(values)
+    return mean_tier * DECK_QUALITY_MULTIPLIER
+
+
 def damage_efficiency_penalty(combat_summary: object) -> float:
     """Penalize low damage-per-turn across fights (Phase B combat_summary only).
 
@@ -1038,9 +1090,8 @@ def damage_efficiency_penalty(combat_summary: object) -> float:
 def run_score(run_data: dict[str, Any]) -> float:
     """Total run score from progression, HP conservation, and outcome.
 
-    Weights tuned on human runs (tools/tune_run_score.py):
-    floors*15 + (act-1)*60 + avg_hp_pct*100 + win_bonus(1000) + bosses*100
-    + damage_efficiency_penalty (agent Phase B runs with combat_summary).
+    floors*15 + (act-1)*60 + avg_hp_pct*50 + deck_quality*25 + win_bonus(1000)
+    + bosses*100 + damage_efficiency_penalty (Phase B combat_summary).
     """
     floors = int(run_data.get("floors_reached") or 0)
     act = int(run_data.get("act_reached") or 1)
@@ -1050,15 +1101,17 @@ def run_score(run_data: dict[str, Any]) -> float:
 
     floor_score = floors * 15
     act_bonus = (act - 1) * 60
-    hp_conservation_score = avg_hp_remaining * 100.0
+    hp_conservation_score = avg_hp_remaining * 50.0
     win_bonus = 1000.0 if won else 0.0
     boss_bonus = bosses_killed * 100.0
+    deck_score = deck_quality_score(run_data.get("final_deck"))
     dmg_penalty = damage_efficiency_penalty(run_data.get("combat_summary"))
 
     total = (
         floor_score
         + act_bonus
         + hp_conservation_score
+        + deck_score
         + win_bonus
         + boss_bonus
         + dmg_penalty
