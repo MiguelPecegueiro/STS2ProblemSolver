@@ -26,7 +26,11 @@ Reference for layout, APIs, and where to change behavior. Use the TOC to jump ar
 18. [Known limitations](#18-known-limitations)
 19. [Where to extend next](#19-where-to-extend-next)
 
-**Also see:** [Model checkpoint lineage](MODEL_LINEAGE.md) — BC/PPO version history, collapse notes, artifact paths.
+**Also see:**
+
+- [Model checkpoint lineage](MODEL_LINEAGE.md) — BC/PPO version history, collapse notes, artifact paths.
+- [Qwen + PPO roadmap](QWEN_PPO_ROADMAP.md) — strategic LLM layer, prerequisites, integration phases, risks.
+- [Patch management](PATCH_MANAGEMENT.md) — balance patch impact levels, retrain triggers, data versioning.
 
 ---
 

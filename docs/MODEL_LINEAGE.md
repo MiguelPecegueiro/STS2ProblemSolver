@@ -4,6 +4,10 @@ Human-readable history of behavioral-cloning (BC) and PPO checkpoints. Version l
 
 `models/*.pt` are gitignored — only configs and logs in the repo prove training runs. Keep copies of important checkpoints outside the repo if you need to recover them.
 
+**Forward plan:** [Qwen + PPO roadmap](QWEN_PPO_ROADMAP.md) — when and how to add a strategic LLM layer after PPO plateaus.
+
+**Patches:** [Patch management](PATCH_MANAGEMENT.md) — when to rescrape, retrain BC, or restart the full pipeline.
+
 ---
 
 ## Lineage (current understanding)
