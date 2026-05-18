@@ -26,6 +26,8 @@ Reference for layout, APIs, and where to change behavior. Use the TOC to jump ar
 18. [Known limitations](#18-known-limitations)
 19. [Where to extend next](#19-where-to-extend-next)
 
+**Also see:** [Model checkpoint lineage](MODEL_LINEAGE.md) — BC/PPO version history, collapse notes, artifact paths.
+
 ---
 
 ## 1. What this project is
