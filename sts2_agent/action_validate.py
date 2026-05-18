@@ -302,20 +302,26 @@ def _validate_event(state: dict, action: dict) -> tuple[bool, str]:
 
 
 def _potion_at_slot(player: dict, slot: int) -> dict | object | None:
-    from sts2_agent.potions import iter_potion_belt_slots
+    from sts2_agent.potions import iter_potion_belt_slots, potion_is_filled
 
     for belt_slot, potion in iter_potion_belt_slots(player):
         if belt_slot == slot:
             return potion
     potions = player.get("potions") or []
     if isinstance(potions, list) and 0 <= slot < len(potions):
-        return potions[slot]
+        candidate = potions[slot]
+        if potion_is_filled(candidate):
+            return candidate
     return None
 
 
 def _validate_potion_slot(state: dict, action: dict) -> tuple[bool, str]:
+    from sts2_agent.potions import is_potion_slot_failed
+
     player = state.get("player") or {}
     slot = int(action.get("slot", -1))
+    if is_potion_slot_failed(player, slot):
+        return False, f"potion slot {slot} blocked after failed use"
     potion = _potion_at_slot(player, slot)
     if not potion or (isinstance(potion, dict) and not potion.get("name") and not potion.get("id")):
         return False, f"potion slot {slot} empty"

@@ -168,6 +168,8 @@ def potion_combat_label(potion: object) -> str:
 
 
 _failed_use_slots: dict[str, set[int]] = {}
+# (max_potion_slots, slot) — survives belt emptying after API reject or desync
+_api_rejected_slots: set[tuple[int, int]] = set()
 
 
 def potion_use_fail_key(player: dict) -> str:
@@ -180,16 +182,74 @@ def potion_use_fail_key(player: dict) -> str:
     return "|".join(parts)
 
 
+def _belt_capacity(player: dict) -> int:
+    return int(player.get("max_potion_slots") or 3)
+
+
 def mark_potion_use_failed(player: dict, slot: int) -> None:
-    _failed_use_slots.setdefault(potion_use_fail_key(player), set()).add(int(slot))
+    slot_i = int(slot)
+    _failed_use_slots.setdefault(potion_use_fail_key(player), set()).add(slot_i)
+    _api_rejected_slots.add((_belt_capacity(player), slot_i))
 
 
 def clear_potion_use_failures(player: dict) -> None:
     _failed_use_slots.pop(potion_use_fail_key(player), None)
 
 
+def clear_potion_session_failures() -> None:
+    """Reset potion failure memory between combats."""
+    _failed_use_slots.clear()
+    _api_rejected_slots.clear()
+
+
 def is_potion_slot_failed(player: dict, slot: int) -> bool:
-    return int(slot) in _failed_use_slots.get(potion_use_fail_key(player), set())
+    slot_i = int(slot)
+    cap = _belt_capacity(player)
+    if (cap, slot_i) in _api_rejected_slots:
+        if potion_slot_identity(player, slot_i):
+            _api_rejected_slots.discard((cap, slot_i))
+        else:
+            return True
+    return slot_i in _failed_use_slots.get(potion_use_fail_key(player), set())
+
+
+def potion_slot_identity(player: dict, slot: int) -> str | None:
+    """Stable id for the potion in a belt slot (for no-op detection)."""
+    for belt_slot, potion in iter_potion_belt_slots(player):
+        if belt_slot != int(slot):
+            continue
+        if isinstance(potion, dict):
+            return str(potion.get("id") or potion.get("name") or "").strip() or None
+        text = str(potion or "").strip()
+        return text or None
+    return None
+
+
+def note_potion_use_no_effect(
+    before_state: dict,
+    after_state: dict,
+    action: dict,
+) -> bool:
+    """If use_potion left the same potion in the slot, block further retries."""
+    if str(action.get("action") or "") != "use_potion":
+        return False
+    slot = action.get("slot")
+    if slot is None:
+        return False
+    slot_i = int(slot)
+    before_player = before_state.get("player") or {}
+    after_player = after_state.get("player") or {}
+    before_id = potion_slot_identity(before_player, slot_i)
+    after_id = potion_slot_identity(after_player, slot_i)
+    if not before_id or before_id != after_id:
+        return False
+    mark_potion_use_failed(before_player, slot_i)
+    logger.warning(
+        "potions: slot %d (%s) unchanged after use_potion - blocking further attempts",
+        slot_i,
+        before_id,
+    )
+    return True
 
 
 def potion_label(potion: dict) -> str:
@@ -500,7 +560,7 @@ def evaluate_combat_potions(ctx: CombatPotionContext) -> tuple[dict | None, list
     ) -> tuple[dict[str, Any] | None, list[str]]:
         label = potion_label(potion) if isinstance(potion, dict) else potion_combat_label(potion)
         need_target = potion_needs_enemy_target(potion, profile, kb)
-        resolved = target
+        resolved = None
         if need_target:
             resolved = pick_potion_target(ctx, prefer=target)
             if not resolved or not resolved.get("entity_id"):

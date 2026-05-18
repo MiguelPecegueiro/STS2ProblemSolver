@@ -758,9 +758,10 @@ class DataPipeline:
             self._enemy_hp_snapshot[eid] = hp
 
     def _end_combat(self, state: dict) -> None:
-        from sts2_agent.potions import get_potion_drop_tracker
+        from sts2_agent.potions import clear_potion_session_failures, get_potion_drop_tracker
         from sts2_agent.scorer import combat_reward
 
+        clear_potion_session_failures()
         get_potion_drop_tracker().note_combat_ended(self._combat_state_type)
 
         # Credit damage for enemies removed from battle (killed)

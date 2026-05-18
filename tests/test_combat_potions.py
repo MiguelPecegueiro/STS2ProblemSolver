@@ -6,12 +6,14 @@ from sts2_agent.potions import (
     CRITICAL_HEAL_HP_RATIO,
     EMERGENCY_HP_RATIO,
     CombatPotionContext,
+    clear_potion_session_failures,
     clear_potion_use_failures,
     emergency_potion_score,
     evaluate_combat_potions,
     get_potion_profile,
     is_potion_slot_failed,
     mark_potion_use_failed,
+    note_potion_use_no_effect,
     player_hp_ratio,
     potion_needs_enemy_target,
 )
@@ -108,6 +110,54 @@ def test_emergency_logs_scores_for_each_slot() -> None:
 def test_emergency_threshold_constants() -> None:
     assert CRITICAL_HEAL_HP_RATIO == 0.35
     assert EMERGENCY_HP_RATIO == 0.25
+
+
+def test_api_reject_blocks_empty_slot_after_belt_clears() -> None:
+    """Failed-slot memory must survive belt fingerprint change (empty belt)."""
+    clear_potion_session_failures()
+    player_with = {
+        "max_potion_slots": 3,
+        "potions": [{"slot": 0, "name": "Fire Potion", "id": "FIRE_POTION"}],
+    }
+    mark_potion_use_failed(player_with, 0)
+    player_empty = {"max_potion_slots": 3, "potions": []}
+    assert is_potion_slot_failed(player_empty, 0)
+    clear_potion_session_failures()
+
+
+def test_note_potion_use_no_effect_blocks_slot() -> None:
+    player = {
+        "hp": 10,
+        "max_hp": 80,
+        "potions": [{"slot": 0, "name": "Flex Potion", "id": "FLEX_POTION"}],
+    }
+    before = {"player": player}
+    after = {"player": dict(player)}
+    action = {"action": "use_potion", "slot": 0, "target": "FOGMOG_0"}
+    assert note_potion_use_no_effect(before, after, action) is True
+    assert is_potion_slot_failed(player, 0)
+    ctx = _ctx(player=player, hp=10, hp_ratio=10 / 80)
+    assert evaluate_combat_potions(ctx)[0] is None
+
+
+def test_emergency_buff_potion_omits_enemy_target() -> None:
+    """Flex-style buffs must not inherit lethal_target (causes API no-op loops)."""
+    player = {
+        "hp": 10,
+        "max_hp": 80,
+        "potions": [{"slot": 0, "name": "Flex Potion", "id": "FLEX_POTION"}],
+    }
+    clear_potion_use_failures(player)
+    ctx = _ctx(
+        player=player,
+        hp=10,
+        hp_ratio=10 / 80,
+        lethal_target={"hp": 50, "entity_id": "FOGMOG_0", "name": "Fogmog"},
+    )
+    action, reasons = evaluate_combat_potions(ctx)
+    assert action == {"action": "use_potion", "slot": 0}
+    assert "target" not in action
+    assert any("emergency" in r for r in reasons)
 
 
 def test_offensive_potion_includes_enemy_target() -> None:

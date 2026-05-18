@@ -160,6 +160,7 @@ def run(
 ) -> None:
     last_fingerprint: str | None = None
     last_action_key: str | None = None
+    last_potion_action: tuple[object, ...] | None = None
 
     logging.info("Autonomous loop active - %s", shutdown_help_message())
 
@@ -229,6 +230,18 @@ def run(
             and isinstance(decision_action, dict)
             and decision_action.get("action") in ("select_card", "confirm_selection")
         )
+        potion_action_key: tuple[object, ...] | None = None
+        if isinstance(decision_action, dict) and decision_action.get("action") == "use_potion":
+            potion_action_key = (
+                "use_potion",
+                decision_action.get("slot"),
+                decision_action.get("target"),
+            )
+        stuck_potion = (
+            not skip_dedup
+            and potion_action_key is not None
+            and potion_action_key == last_potion_action
+        )
         if (
             not skip_dedup
             and action_key == last_action_key
@@ -237,6 +250,7 @@ def run(
             and not stuck_rewards
             and not stuck_card_select
             and not stuck_treasure
+            and not stuck_potion
         ):
             time.sleep(interval)
             continue
@@ -282,6 +296,8 @@ def run(
                     int(decision_action["slot"]),
                 )
                 last_action_key = None
+                if potion_action_key is not None:
+                    last_potion_action = potion_action_key
             elif (
                 isinstance(decision_action, dict)
                 and decision_action.get("action") == "choose_event_option"
@@ -350,10 +366,17 @@ def run(
                     from sts2_agent.rewards import note_rewards_screen_done
 
                     note_rewards_screen_done()
+                elif action_name == "use_potion" and decision_action.get("slot") is not None:
+                    from sts2_agent.potions import note_potion_use_no_effect
+
+                    if note_potion_use_no_effect(state, new_state, decision_action):
+                        last_potion_action = None
             if not skip_dedup:
                 _record_training_data(state, decision_action, decision_reasons)
             last_fingerprint = fingerprint
             last_action_key = action_key
+            if potion_action_key is not None:
+                last_potion_action = potion_action_key
 
         time.sleep(interval)
 
