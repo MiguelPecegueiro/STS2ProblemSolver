@@ -228,7 +228,7 @@ def test_potion_hoard_legacy_filled_only_list():
         }
     )
     rate = potion_hoard_death_rate(runs, default_max_slots=2)
-    assert rate == 100.0
+    assert rate == 50.0  # one death still had a potion, one had none
 
 
 def test_potion_hoard_slot_aware_belt():
@@ -245,7 +245,7 @@ def test_potion_hoard_slot_aware_belt():
         }
     )
     rate = potion_hoard_death_rate(runs)
-    assert rate == pytest.approx(100.0 * 2 / 3)  # 2 hoard of 3
+    assert rate == pytest.approx(100.0 * 2 / 3)  # empty belt is not hoarding
 
 
 def test_potion_hoard():
@@ -258,4 +258,4 @@ def test_potion_hoard():
         }
     )
     rate = potion_hoard_death_rate(runs)
-    assert rate == 100.0
+    assert rate == 50.0  # only the death with a potion left counts

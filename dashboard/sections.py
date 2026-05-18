@@ -317,7 +317,7 @@ def section_combat_efficiency(
         c2.metric(
             "Potion hoarding at death",
             f"{potions:.1f}%",
-            help="% deaths with at least one empty potion slot (uses max_potion_slots on run)",
+            help="% deaths where at least one potion was still in the belt (unused at death)",
         )
     else:
         c2.caption("Potion metric: no deaths")

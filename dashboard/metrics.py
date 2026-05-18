@@ -730,7 +730,7 @@ def _potion_belt_filled_count(row: pd.Series, *, default_max_slots: int = 3) -> 
 
 
 def potion_hoard_death_rate(runs: pd.DataFrame, *, default_max_slots: int = 3) -> float | None:
-    """% of deaths with at least one empty potion slot (unused capacity)."""
+    """% of deaths where the belt still had at least one unused potion."""
     agent = agent_runs_only(runs)
     deaths = agent[agent["won"] == False]  # noqa: E712
     if deaths.empty:
@@ -745,7 +745,7 @@ def potion_hoard_death_rate(runs: pd.DataFrame, *, default_max_slots: int = 3) -
         if max_slots <= 0:
             continue
         counted += 1
-        if filled < max_slots:
+        if filled >= 1:
             hoard += 1
     if counted == 0:
         return None

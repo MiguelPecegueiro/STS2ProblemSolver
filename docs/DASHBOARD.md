@@ -82,7 +82,7 @@ Old runs without `combat_summary` / `killing_enemy` should show **no data** in U
 | Metric | Definition | Source |
 |--------|------------|--------|
 | Block efficiency | % combat turns with block when incoming intent > 0 | `decisions.jsonl` |
-| Potion hoarding at death | % deaths with empty potion slot | `runs.jsonl` |
+| Potion hoarding at death | % deaths with at least one unused potion in belt | `runs.jsonl` |
 | Energy on end_turn | % `end_turn` with energy left | `decisions.jsonl` |
 | Damage per fight | Per-fight damage dealt | `combat_summary[].damage_dealt` on new runs |
 
