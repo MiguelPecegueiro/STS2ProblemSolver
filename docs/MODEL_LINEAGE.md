@@ -12,12 +12,13 @@ Human-readable history of behavioral-cloning (BC) and PPO checkpoints. Version l
 flowchart LR
   bc_v1["bc_v1<br/>(original BC)"] --> ppo_v1
   ppo_v1 --> ppo_v2
-  ppo_v2 --> collapse["PPO collapse<br/>(ppo_v3 attempt)"]
-  collapse --> bc_v3
-  bc_v3 --> ppo_v3["ppo_v3<br/>(planned / in progress)"]
+  ppo_v2 --> fail["Failed PPO<br/>(ppo_v2 init)"]
+  fail --> bc_v3
+  bc_v3 --> ppo_v3["ppo_v3<br/>(deploy)"]
 
   style bc_v1 fill:#999,color:#fff
-  style collapse fill:#f96,color:#000
+  style fail fill:#f96,color:#000
+  style ppo_v3 fill:#9f9,color:#000
 ```
 
 | Version | Type | Parent init | Role | Artifact status |
@@ -25,9 +26,9 @@ flowchart LR
 | **bc_v1** | BC | — | First BC policy trained on early `decisions.jsonl` | **Lost** (original `policy_net` weights not recoverable) |
 | **ppo_v1** | PPO | `policy_net.pt` (bc_v1 era) | First offline PPO fine-tune on growing dataset | `models/ppo_v1.pt` (local; overwritten by later PPO runs unless copied) |
 | **ppo_v2** | PPO | ppo_v1 lineage | Policy used for agent play (`AGENT_VERSION = ppo_v2` in `sts2_agent/main.py`) | `models/ppo_v2.pt` (local; **not** in git at last check) |
-| **—** | — | ppo_v2 | **Failed ppo_v3 attempt**: continued PPO from `ppo_v2` | No stable checkpoint kept; see [Collapse: ppo_v3 from ppo_v2](#collapse-ppo_v3-from-ppo_v2) |
-| **bc_v3** | BC | Fresh train on expanded data (post-collapse) | Reset BC after PPO collapse; replaces bc_v1 weights in `policy_net.pt` | `models/policy_net.pt` + `models/model_config.json` |
-| **ppo_v3** | PPO | `policy_net.pt` (bc_v3) | Next PPO generation (intended) | Not finalized; use `--model-out models/ppo_v3.pt` to avoid clobbering `ppo_v1.pt` |
+| **—** | — | ppo_v2 | **Failed PPO continuation** from `ppo_v2` (not bc_v3) | No deployable checkpoint; see [Failed PPO from ppo_v2](#failed-ppo-from-ppo_v2) |
+| **bc_v3** | BC | Fresh train on expanded data (post-collapse) | Reset BC; weights in `policy_net.pt` / `bc_v3.pt` | `models/policy_net.pt`, `models/model_config.json` |
+| **ppo_v3** | PPO | `bc_v3.pt` (bc_v3 actor) | **Current deploy candidate** — healthy PPO fine-tune | `models/ppo_v3.pt` (copy from training output; see [ppo_v3](#ppo_v3-successful)) |
 
 ---
 
@@ -41,7 +42,7 @@ After the PPO collapse, BC was retrained from scratch on a much larger `decision
 | Val accuracy | *(not recorded)* | **63.0%** |
 | `card_reward` accuracy (per state type) | 66.4% | **85.6%** (train); 77.4% (val) |
 
-**Why retrain:** PPO-on-PPO from **ppo_v2** was unstable; a stronger BC base was needed before **ppo_v3**. The `card_reward` jump (66% → 86% train) is the largest per-screen gain and matters directly for deck quality during agent runs.
+**Why retrain:** PPO-on-PPO from **ppo_v2** was unstable; a stronger BC base was needed before a real **ppo_v3** run from bc_v3. The `card_reward` jump (66% → 86% train) is the largest per-screen gain and matters directly for deck quality during agent runs.
 
 ### bc_v3 full evaluation
 
@@ -69,17 +70,11 @@ From `python training/train.py` final eval (100 epochs). Also stored in `models/
 
 ---
 
-## Collapse: ppo_v3 from ppo_v2
+## Failed PPO from ppo_v2
 
-**Goal:** Train **ppo_v3** by initializing the PPO actor from **ppo_v2** (`--start-from models/ppo_v2.pt`), same offline pipeline as `training/train_ppo.py`.
+**Goal:** Continue offline PPO from **ppo_v2** (`--start-from models/ppo_v2.pt`) — same pipeline as `training/train_ppo.py`, *not* from bc_v3.
 
-**Outcome:** Training was unstable from epoch 1 and stopped by entropy early-stop within five epochs. Symptoms:
-
-- **Clip fraction > 50% from epoch 1** (trainer warns and suggests lowering LR).
-- **Entropy** started near the stop threshold (~0.76–0.80) and fell below **0.75** by epoch 5.
-- **Early stop reason:** `entropy_below_threshold` (not a clean full run).
-
-Recorded in `models/ppo_config.json` (`bc_init`: `models\ppo_v2.pt`) and `logs/ppo_training.log` (2026-05-18). Best epoch by entropy in that run was **epoch 2** (entropy ≈ 0.806); final epoch 5 entropy ≈ 0.697.
+**Outcome:** Unstable from epoch 1; entropy early-stop within five epochs. Recorded in `logs/ppo_training.log` (2026-05-18 morning; `bc_init`: `models\ppo_v2.pt` in an earlier `ppo_config.json` snapshot).
 
 | Epoch | Entropy | Clip fraction | Notes |
 |------:|--------:|--------------:|-------|
@@ -89,9 +84,44 @@ Recorded in `models/ppo_config.json` (`bc_init`: `models\ppo_v2.pt`) and `logs/p
 | 4 | 0.750 | 67.4% | |
 | 5 | 0.697 | 69.2% | early stop |
 
-Hyperparameters for that attempt (from `ppo_config.json`): `lr=1e-5`, `entropy_coef=0.05`, `entropy_stop=0.75`, dataset **71 622** transitions / **402** runs. Earlier successful **ppo_v1** runs from `policy_net.pt` on the same day had clip fraction **~32%** at epoch 1 — continuing from **ppo_v2** behaved qualitatively worse.
+**Response:** Retrain BC as **bc_v3**, then train **ppo_v3** from bc_v3 (see below).
 
-**Response:** Retrain BC as **bc_v3** → `policy_net.pt` (see [BC retrain](#bc-retrain-old-bc-bc_v1-vs-bc_v3)), then plan **ppo_v3** from bc_v3 rather than chaining PPO-on-PPO from a peaked policy.
+---
+
+## ppo_v3 (successful)
+
+**Goal:** Offline PPO with actor init from **bc_v3** (`--start-from models/bc_v3.pt` or `policy_net.pt` after BC train). Value head reinitialized each run (default `train_ppo.py` behavior).
+
+**Outcome:** Healthy training — good enough to deploy. Log + `models/ppo_config.json` (2026-05-18, `bc_init`: `models\bc_v3.pt`).
+
+### Failed ppo_v2-init vs successful ppo_v3 (bc_v3-init)
+
+| Metric | Failed PPO (`ppo_v2` init) | **ppo_v3** (`bc_v3` init) |
+|--------|---------------------------|---------------------------|
+| Starting entropy | 0.76 (already collapsed) | **0.95** (healthy) |
+| Clip fraction | 57–69% (thrashing) | **30–42%** (reasonable) |
+| Epochs completed | 1–5 | **10** |
+| Best checkpoint | epoch 2 | **epoch 1** (entropy **0.95**) |
+| Early stop | epoch 5 (`entropy_stop` 0.75) | epoch 10 (`entropy_stop` 0.80) |
+
+### ppo_v3 training log (per epoch)
+
+| Epoch | Entropy | Clip fraction |
+|------:|--------:|--------------:|
+| 1 | **0.951** | 30.5% |
+| 2 | 0.937 | 30.4% |
+| 3 | 0.930 | 31.6% |
+| 4 | 0.914 | 33.1% |
+| 5 | 0.894 | 34.4% |
+| 6 | 0.875 | 35.7% |
+| 7 | 0.853 | 37.2% |
+| 8 | 0.836 | 38.8% |
+| 9 | 0.816 | 40.6% |
+| 10 | 0.781 | 42.5% |
+
+**Deploy checkpoint:** weights at **epoch 1** (`best_entropy_at_save` ≈ 0.951). Copy to `models/ppo_v3.pt` for inference; bump `AGENT_VERSION` to `ppo_v3` in `sts2_agent/main.py` when switching play data collection.
+
+**Note:** Default `train_ppo.py --model-out` wrote to `ppo_v1.pt` during this run — use an explicit `--model-out models/ppo_v3.pt` next time to avoid ambiguity.
 
 ---
 
@@ -100,11 +130,12 @@ Hyperparameters for that attempt (from `ppo_config.json`): `lr=1e-5`, `entropy_c
 | Path | Typical version | Written by |
 |------|-----------------|------------|
 | `models/policy_net.pt` | bc_v3 (current BC) | `python training/train.py` |
+| `models/bc_v3.pt` | bc_v3 actor copy for PPO `--start-from` | Manual copy of `policy_net.pt` |
 | `models/model_config.json` | bc_v3 metadata | `training/train.py` |
 | `models/ppo_v1.pt` | **Default PPO output** (often latest experiment, not necessarily “v1”) | `python training/train_ppo.py` (default `--model-out`) |
-| `models/ppo_config.json` | Last PPO run metadata | `training/train_ppo.py` |
-| `models/ppo_v2.pt` | Play checkpoint for agent | Manual copy / rename (not a train script default) |
-| `models/ppo_v3.pt` | (recommended) | `train_ppo.py --model-out models/ppo_v3.pt` |
+| `models/ppo_v2.pt` | Previous play checkpoint | Manual copy / rename (superseded by ppo_v3 for deploy) |
+| `models/ppo_v3.pt` | **ppo_v3 deploy** | Copy epoch-1 checkpoint from successful PPO run |
+| `models/ppo_config.json` | Last PPO run (currently ppo_v3 metrics) | `training/train_ppo.py` |
 
 **Pitfall:** `train_ppo.py` defaults to `--model-out models/ppo_v1.pt`, so repeated experiments overwrite the same file unless you pass `--model-out`. Name checkpoints when you copy them (e.g. `ppo_v2.pt`).
 
@@ -116,8 +147,9 @@ Runs and decisions are tagged with `agent_version` (`sts2_agent/main.py` → `se
 
 | `agent_version` | Intended checkpoint |
 |-----------------|---------------------|
-| `ppo_v2` | `models/ppo_v2.pt` (inference prefers PPO when present; see `training/inference.py`) |
-| (BC play) | `models/policy_net.pt` with `--policy` / BC path |
+| **`ppo_v3`** | `models/ppo_v3.pt` (current deploy target) |
+| `ppo_v2` | `models/ppo_v2.pt` (historical play runs) |
+| (BC play) | `models/policy_net.pt` / `bc_v3.pt` with `--policy` |
 | Historical tags | e.g. `bc_v1_64runs`, `rules_v1` — see `data/runs.jsonl` / `decisions.jsonl` |
 
 Bump `AGENT_VERSION` in `sts2_agent/main.py` when you change the policy you deploy for data collection.
@@ -132,16 +164,16 @@ Bump `AGENT_VERSION` in `sts2_agent/main.py` when you change the policy you depl
 python training/train.py
 ```
 
-**PPO from BC (intended ppo_v3):**
+**PPO from bc_v3 (ppo_v3 — shipped):**
 
 ```bash
 python training/train_ppo.py \
-  --start-from models/policy_net.pt \
+  --start-from models/bc_v3.pt \
   --model-out models/ppo_v3.pt \
   --config-out models/ppo_v3_config.json
 ```
 
-**PPO from ppo_v2 (failed path — documented for history):**
+**PPO from ppo_v2 (failed — do not use):**
 
 ```bash
 python training/train_ppo.py --start-from models/ppo_v2.pt --entropy-stop 0.75
@@ -157,8 +189,9 @@ Useful flags: `--entropy-stop`, `--entropy-coef`, `--lr`. The value/critic head 
 |------|--------|
 | 2026-05-17 | Early PPO on small dataset from bc-era `policy_net.pt`; multiple runs logged to `ppo_v1.pt` |
 | 2026-05-17 | Larger-dataset PPO from `policy_net.pt`; entropy stop at epoch 17 (clip frac rose late) |
-| 2026-05-18 | ppo_v3-from-ppo_v2 attempts: collapse at epoch ≤5, high clip fraction from start |
+| 2026-05-18 | Failed PPO from `ppo_v2` init: collapse ≤5 epochs, clip 57–69% (see [Failed PPO](#failed-ppo-from-ppo_v2)) |
 | 2026-05-18 | bc_v3 BC train → `model_config.json` / `policy_net.pt` (train 69.5%, val 63.0%; see [BC retrain](#bc-retrain-old-bc-bc_v1-vs-bc_v3)) |
+| 2026-05-18 | **ppo_v3** from `bc_v3.pt`: 10 epochs, best epoch 1 entropy 0.95, clip 30–42% — deploy candidate (see [ppo_v3](#ppo_v3-successful)) |
 
 ---
 
