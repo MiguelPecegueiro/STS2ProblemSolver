@@ -114,6 +114,19 @@ def _card_id(card: dict) -> str:
     return str(card.get("id") or card.get("name") or "UNKNOWN").upper().replace(" ", "_")
 
 
+def _enemy_names_from_state(state: dict) -> list[str]:
+    names: list[str] = []
+    seen: set[str] = set()
+    for enemy in (state.get("battle") or {}).get("enemies") or []:
+        if not isinstance(enemy, dict):
+            continue
+        label = str(enemy.get("name") or enemy.get("id") or "").strip()
+        if label and label not in seen:
+            seen.add(label)
+            names.append(label)
+    return names
+
+
 def extract_deck_card_ids(state: dict) -> list[str]:
     """Collect deck card IDs from player.deck or all visible piles."""
     player = state.get("player") or {}
@@ -351,6 +364,9 @@ class DataPipeline:
         self._combat_prev_hp: int | None = None
         self._combat_prev_block: int | None = None
         self._combat_damage_since_decision = 0
+        self._combat_damage_dealt_fight = 0
+        self._combat_enemy_names: list[str] = []
+        self._combat_summaries: list[dict[str, Any]] = []
         self._enemy_intent_history: dict[str, list[dict]] = {}
 
         DECISIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -437,7 +453,8 @@ class DataPipeline:
         if self._run_active and self._should_end_run(state_type, player):
             won = state_type != "game_over" and hp > 0
             cause = self._infer_death_cause(state_type, state)
-            self.end_run(state, won=won, cause_of_death=cause)
+            killing = self._infer_killing_enemy(state) if not won else None
+            self.end_run(state, won=won, cause_of_death=cause, killing_enemy=killing)
 
         self._last_state_type = state_type
 
@@ -479,6 +496,9 @@ class DataPipeline:
         self._combat_prev_hp = None
         self._combat_prev_block = None
         self._combat_damage_since_decision = 0
+        self._combat_damage_dealt_fight = 0
+        self._combat_enemy_names = []
+        self._combat_summaries = []
         self._run_started_at = datetime.now(timezone.utc)
 
         if state:
@@ -505,6 +525,7 @@ class DataPipeline:
         *,
         won: bool,
         cause_of_death: str | None = None,
+        killing_enemy: dict[str, Any] | None = None,
     ) -> None:
         if not self.run_id or not self._run_active:
             return
@@ -513,7 +534,9 @@ class DataPipeline:
             self._end_combat(state or {})
 
         outcome = "won" if won else "lost"
-        summary = self._build_run_summary(state, won, cause_of_death, outcome)
+        summary = self._build_run_summary(
+            state, won, cause_of_death, outcome, killing_enemy=killing_enemy
+        )
         run_score_val = float(summary.get("run_score") or 0.0)
 
         run_outcome = {
@@ -576,6 +599,26 @@ class DataPipeline:
         )
 
         immediate = self._immediate_reward(state, action)
+        action_name = str(action.get("action") or "")
+
+        snapshot = build_state_snapshot(
+            state,
+            enemy_intent_histories=self._enemy_intent_history,
+        )
+        card_reward_offered: list[str] | None = None
+        if state_type.lower() == "card_reward":
+            from sts2_agent.state_parse import (
+                card_reward_name_for_index,
+                extract_card_reward_offered,
+            )
+
+            card_reward_offered = extract_card_reward_offered(state)
+            if card_reward_offered:
+                snapshot["card_reward_offered"] = card_reward_offered
+            if action_name == "select_card_reward":
+                picked_name = card_reward_name_for_index(state, action.get("card_index", -1))
+                if picked_name:
+                    snapshot["card_reward_picked"] = picked_name
 
         record = {
             "run_id": self.run_id,
@@ -586,15 +629,19 @@ class DataPipeline:
             "floor": _safe_int(run.get("floor")),
             "act": _safe_int(run.get("act"), 1),
             "state_type": state_type,
-            "state_snapshot": build_state_snapshot(
-                state,
-                enemy_intent_histories=self._enemy_intent_history,
-            ),
+            "state_snapshot": snapshot,
             "action_taken": action,
             "action_reasoning": reason_text,
             "immediate_reward": immediate,
             "run_outcome": None,
         }
+        if card_reward_offered:
+            record["card_reward_offered"] = card_reward_offered
+
+        if state_type.lower() == "card_reward" and action_name == "select_card_reward":
+            picked = card_reward_name_for_index(state, action.get("card_index", -1))
+            if picked:
+                record["card_reward_picked"] = picked
 
         self._buffer.append(record)
         idx = len(self._buffer) - 1
@@ -721,6 +768,8 @@ class DataPipeline:
         self._combat_prev_hp = _safe_int(player.get("hp"))
         self._combat_prev_block = _safe_int(player.get("block"))
         self._combat_damage_since_decision = 0
+        self._combat_damage_dealt_fight = 0
+        self._combat_enemy_names = _enemy_names_from_state(state)
         for enemy in (state.get("battle") or {}).get("enemies") or []:
             if isinstance(enemy, dict) and enemy.get("entity_id"):
                 eid = str(enemy["entity_id"])
@@ -784,6 +833,7 @@ class DataPipeline:
                 dealt = prev - hp
                 self._damage_dealt_run += dealt
                 self._combat_damage_since_decision += dealt
+                self._combat_damage_dealt_fight += dealt
             self._enemy_hp_snapshot[eid] = hp
 
     def _end_combat(self, state: dict) -> None:
@@ -803,6 +853,7 @@ class DataPipeline:
                 dealt = prev_hp
                 self._damage_dealt_run += dealt
                 self._combat_damage_since_decision += dealt
+                self._combat_damage_dealt_fight += dealt
 
         player = state.get("player") or {}
         end_hp = _safe_int(player.get("hp"), self._last_hp or 0)
@@ -816,6 +867,21 @@ class DataPipeline:
         )
         won_combat = end_hp > 0
         reward = combat_reward(start_hp, end_hp, max_hp, won_combat)
+        damage_taken = max(0, start_hp - end_hp)
+        enemy_names = list(self._combat_enemy_names) or _enemy_names_from_state(state)
+
+        self._combat_summaries.append(
+            {
+                "enemy_names": enemy_names,
+                "turns": len(self._combat_decision_indices),
+                "damage_taken": damage_taken,
+                "damage_dealt": self._combat_damage_dealt_fight,
+                "hp_start": start_hp,
+                "hp_end": end_hp,
+                "won_fight": won_combat,
+                "state_type": self._combat_state_type,
+            }
+        )
 
         self._hp_before_each_combat.append(start_hp)
         self._hp_after_each_combat.append(end_hp)
@@ -840,6 +906,8 @@ class DataPipeline:
         self._combat_prev_hp = None
         self._combat_prev_block = None
         self._combat_damage_since_decision = 0
+        self._combat_damage_dealt_fight = 0
+        self._combat_enemy_names = []
 
     def _apply_reward_to_indices(self, indices: list[int], total_reward: float) -> None:
         if not indices:
@@ -889,6 +957,8 @@ class DataPipeline:
         won: bool,
         cause_of_death: str | None,
         outcome: str,
+        *,
+        killing_enemy: dict[str, Any] | None = None,
     ) -> dict:
         # run_score: floors*15 + (act-1)*60 + avg_hp_pct*100 + win(1000) + bosses*100
         from sts2_agent.scorer import run_score
@@ -936,6 +1006,8 @@ class DataPipeline:
             "floors_reached": self._max_floor_seen,
             "act_reached": self._max_act_seen,
             "cause_of_death": cause_of_death,
+            "killing_enemy": killing_enemy,
+            "combat_summary": list(self._combat_summaries),
             "final_deck": deck,
             "final_relics": [r for r in relics if r],
             "total_decisions": self._decision_count,
@@ -957,14 +1029,75 @@ class DataPipeline:
     def _infer_death_cause(self, state_type: str, state: dict) -> str | None:
         if state_type != "game_over" and _safe_int((state.get("player") or {}).get("hp")) > 0:
             return None
+        killing = self._infer_killing_enemy(state)
         battle = state.get("battle") or {}
         enemies = [e.get("name") for e in battle.get("enemies") or [] if isinstance(e, dict)]
         room = state_type
         if state_type in ("monster", "elite", "boss"):
             room = f"{state_type} combat"
+        killer_name = (killing or {}).get("name") if killing else None
+        if killer_name:
+            return f"{room} - vs {killer_name} - hp reached 0"
         if enemies:
             return f"{room} - vs {', '.join(str(e) for e in enemies[:2])} - hp reached 0"
         return f"{room} - hp reached 0"
+
+    def _infer_killing_enemy(self, state: dict) -> dict[str, Any] | None:
+        """Structured killer when the player dies in combat (or at game_over with battle state)."""
+        player = state.get("player") or {}
+        if _safe_int(player.get("hp")) > 0:
+            return None
+
+        state_type = str(state.get("state_type") or "").lower()
+        battle = state.get("battle") or {}
+        enemies = [e for e in battle.get("enemies") or [] if isinstance(e, dict)]
+        if not enemies and state_type not in COMBAT_TYPES and state_type != "game_over":
+            return None
+
+        from sts2_agent.enemy_compendium import compact_enemy_intent
+
+        living = [e for e in enemies if _safe_int(e.get("hp")) > 0]
+        candidates = living if living else enemies
+        if not candidates:
+            return None
+
+        best: dict[str, Any] | None = None
+        best_score = -1
+        for enemy in candidates:
+            peers = living or candidates
+            compact = compact_enemy_intent(enemy, peers=peers) or {}
+            dmg = compact.get("damage")
+            try:
+                score = int(dmg) if dmg is not None else 0
+            except (TypeError, ValueError):
+                score = 0
+            tags = compact.get("tags") or []
+            if any("attack" in str(t).lower() for t in tags):
+                score += 1000
+            name = str(enemy.get("name") or enemy.get("id") or "").strip()
+            if not name:
+                continue
+            if score > best_score:
+                best_score = score
+                best = {
+                    "name": name,
+                    "entity_id": str(enemy.get("entity_id") or enemy.get("id") or ""),
+                    "compendium_key": compact.get("compendium_key"),
+                    "intent": compact.get("intent"),
+                }
+        if best:
+            return best
+        enemy = candidates[0]
+        name = str(enemy.get("name") or enemy.get("id") or "").strip()
+        if not name:
+            return None
+        compact = compact_enemy_intent(enemy, peers=candidates) or {}
+        return {
+            "name": name,
+            "entity_id": str(enemy.get("entity_id") or enemy.get("id") or ""),
+            "compendium_key": compact.get("compendium_key"),
+            "intent": compact.get("intent"),
+        }
 
     def flush_on_exit(self) -> None:
         """Best-effort flush when agent stops unexpectedly."""

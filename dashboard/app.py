@@ -20,6 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from sts2_agent.characters import normalize_character_name  # noqa: E402
+from dashboard.metrics import incoming_damage_from_snapshot  # noqa: E402
 
 DATA_DIR = PROJECT_ROOT / "data"
 RUNS_PATH = DATA_DIR / "runs.jsonl"
@@ -51,6 +52,7 @@ VIEW_COMPARE_VERSIONS = "Compare versions"
 VIEW_MODES = (VIEW_HUMAN, VIEW_AGENT, VIEW_COMPARE, VIEW_COMPARE_VERSIONS)
 
 DEFAULT_AGENT_VERSION = "rules_v1"
+DEFAULT_DASHBOARD_CHARACTER = normalize_character_name("ironclad")
 
 # Streamlit session_state keys - persist sidebar filters across "Reload data".
 FILTER_VIEW_MODE = "dash_filter_view_mode"
@@ -60,6 +62,8 @@ FILTER_DATE_MODE = "dash_filter_date_mode"
 FILTER_CUSTOM_DATES = "dash_filter_custom_dates"
 FILTER_SAVED_AGENT_VERSIONS = "dash_saved_agent_versions"
 FILTER_DECISION_RUN = "dash_filter_decision_run"
+# Kept in sync with dashboard.sections.FILTER_DETAIL_VERSION
+FILTER_DETAIL_VERSION = "dash_detail_agent_version"
 
 
 def _ensure_select_value(key: str, options: list[str], default: str) -> None:
@@ -70,22 +74,36 @@ def _ensure_select_value(key: str, options: list[str], default: str) -> None:
         st.session_state[key] = default if default in options else options[0]
 
 
+def _is_bc_agent_version(version: str) -> bool:
+    """BC training tags (bc_v1, bc_v3, …) — hidden from default version selection."""
+    v = str(version).strip().lower()
+    return v == "bc" or v.startswith("bc_")
+
+
+def _default_agent_versions(versions: list[str]) -> list[str]:
+    """Default multiselect: all versions except BC (fallback to all if only BC exists)."""
+    non_bc = [v for v in versions if not _is_bc_agent_version(v)]
+    return non_bc if non_bc else list(versions)
+
+
 def _saved_agent_versions(versions: list[str]) -> list[str]:
     legacy_key = "agent_versions_pick"
     if FILTER_SAVED_AGENT_VERSIONS not in st.session_state:
         if legacy_key in st.session_state:
-            st.session_state[FILTER_SAVED_AGENT_VERSIONS] = list(st.session_state[legacy_key])
+            st.session_state[FILTER_SAVED_AGENT_VERSIONS] = _default_agent_versions(
+                list(st.session_state[legacy_key])
+            )
         else:
-            st.session_state[FILTER_SAVED_AGENT_VERSIONS] = list(versions)
+            st.session_state[FILTER_SAVED_AGENT_VERSIONS] = _default_agent_versions(versions)
     saved = [v for v in st.session_state[FILTER_SAVED_AGENT_VERSIONS] if v in versions]
     if saved:
         return saved
     if not versions:
         return []
-    # First visit only: default to all versions (do not reset after user clears selection).
+    # User explicitly cleared selection — do not reset.
     if st.session_state[FILTER_SAVED_AGENT_VERSIONS] == []:
         return []
-    return list(versions)
+    return _default_agent_versions(versions)
 
 
 def version_label(version: str) -> str:
@@ -178,8 +196,18 @@ def load_decisions(_revision: str) -> pd.DataFrame:
     flat: list[dict] = []
     for row in rows:
         snap = row.get("state_snapshot") or {}
+        if not isinstance(snap, dict):
+            snap = {}
         action = row.get("action_taken") or {}
         outcome = row.get("run_outcome") or {}
+        immediate = row.get("immediate_reward")
+        block_applied = None
+        hp_lost_this_turn = None
+        damage_dealt_turn = None
+        if isinstance(immediate, dict):
+            block_applied = immediate.get("block_applied")
+            hp_lost_this_turn = immediate.get("hp_lost_this_turn")
+            damage_dealt_turn = immediate.get("damage_dealt")
         flat.append(
             {
                 "run_id": row.get("run_id"),
@@ -190,18 +218,27 @@ def load_decisions(_revision: str) -> pd.DataFrame:
                 "action": action.get("action") if isinstance(action, dict) else None,
                 "card_index": action.get("card_index") if isinstance(action, dict) else None,
                 "action_reasoning": row.get("action_reasoning"),
-                "immediate_reward": row.get("immediate_reward"),
+                "immediate_reward": immediate,
+                "block_applied": block_applied,
+                "hp_lost_this_turn": hp_lost_this_turn,
+                "damage_dealt_turn": damage_dealt_turn,
                 "run_won": outcome.get("won") if isinstance(outcome, dict) else None,
                 "agent_version": row.get("agent_version"),
                 "player_hp": snap.get("player_hp"),
                 "player_max_hp": snap.get("player_max_hp"),
+                "player_energy": snap.get("player_energy"),
+                "incoming_damage": incoming_damage_from_snapshot(snap),
                 "hand": snap.get("hand"),
+                "card_reward_offered": row.get("card_reward_offered")
+                or snap.get("card_reward_offered"),
+                "card_reward_picked": row.get("card_reward_picked")
+                or snap.get("card_reward_picked"),
             }
         )
     df = pd.DataFrame(flat)
     if "timestamp" in df.columns:
         df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", utc=True)
-    for col in ("floor", "act", "immediate_reward", "card_index"):
+    for col in ("floor", "act", "card_index", "block_applied", "hp_lost_this_turn", "damage_dealt_turn"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
@@ -556,11 +593,26 @@ def card_played_name(row: pd.Series) -> str | None:
     return None
 
 
+def current_agent_version(runs: pd.DataFrame) -> str | None:
+    """Agent version with the most recent run (after non-version filters)."""
+    agent = agent_runs_only(runs)
+    if agent.empty or "agent_version" not in agent.columns:
+        return None
+    if "timestamp" in agent.columns and agent["timestamp"].notna().any():
+        latest = agent.dropna(subset=["timestamp"]).sort_values("timestamp").iloc[-1]
+        return str(latest["agent_version"])
+    versions = available_agent_versions(runs)
+    return versions[-1] if versions else None
+
+
 def apply_filters(
     runs: pd.DataFrame,
     decisions: pd.DataFrame,
     card_choices: pd.DataFrame,
     sidebar: dict,
+    *,
+    agent_versions: list[str] | None = None,
+    skip_version_filter: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     r, d, cc = runs.copy(), decisions.copy(), card_choices.copy()
     if r.empty:
@@ -575,7 +627,13 @@ def apply_filters(
         elif view_mode == VIEW_COMPARE:
             pass  # keep human + agent for side-by-side
 
-    selected_versions = sidebar.get("selected_versions") or []
+    if skip_version_filter:
+        selected_versions = []
+    elif agent_versions is not None:
+        selected_versions = list(agent_versions)
+    else:
+        selected_versions = sidebar.get("selected_versions") or []
+
     if selected_versions and "agent_version" in r.columns:
         if view_mode == VIEW_COMPARE and "source" in r.columns:
             r = r[(r["source"] == "human") | (r["agent_version"].isin(selected_versions))]
@@ -655,17 +713,21 @@ def render_sidebar(runs: pd.DataFrame) -> dict:
 
             c_all, c_none = st.sidebar.columns(2)
             if c_all.button("Select all", use_container_width=True):
-                st.session_state[FILTER_SAVED_AGENT_VERSIONS] = list(versions)
+                st.session_state[FILTER_SAVED_AGENT_VERSIONS] = _default_agent_versions(versions)
                 st.rerun()
             if c_none.button("Clear", use_container_width=True):
                 st.session_state[FILTER_SAVED_AGENT_VERSIONS] = []
                 st.rerun()
 
             selected_versions = st.sidebar.multiselect(
-                "Versions to show",
+                "Versions for overview (section 1)",
                 options=versions,
                 default=version_defaults,
-                help="Charts and tables only include checked agent versions",
+                help=(
+                    "Multi-version health trends and early warnings (section 1 only). "
+                    "Sections 2–4 use the analyzer picker below the overview. "
+                    "BC tags (bc_v*) are unchecked by default."
+                ),
             )
             st.session_state[FILTER_SAVED_AGENT_VERSIONS] = list(selected_versions)
             if not selected_versions:
@@ -683,7 +745,12 @@ def render_sidebar(runs: pd.DataFrame) -> dict:
         if "ascension" in runs.columns:
             ascensions += [str(a) for a in sorted(runs["ascension"].dropna().unique())]
 
-    _ensure_select_value(FILTER_CHARACTER, characters, "All")
+    char_default = (
+        DEFAULT_DASHBOARD_CHARACTER
+        if DEFAULT_DASHBOARD_CHARACTER in characters
+        else "All"
+    )
+    _ensure_select_value(FILTER_CHARACTER, characters, char_default)
     _ensure_select_value(FILTER_ASCENSION, ascensions, "All")
     character = st.sidebar.selectbox("Character", characters, key=FILTER_CHARACTER)
     ascension = st.sidebar.selectbox("Ascension", ascensions, key=FILTER_ASCENSION)
@@ -758,7 +825,7 @@ def render_sidebar(runs: pd.DataFrame) -> dict:
         if ver_caption:
             caption += f" - {ver_caption}"
         if selected_versions and view_mode in (VIEW_AGENT, VIEW_COMPARE, VIEW_COMPARE_VERSIONS):
-            caption += f" · showing {len(selected_versions)} version(s)"
+            caption += f" · section 1: {len(selected_versions)} version(s)"
         st.sidebar.caption(caption)
 
     return {
@@ -773,824 +840,19 @@ def render_sidebar(runs: pd.DataFrame) -> dict:
     }
 
 
-def _version_summary_table(runs: pd.DataFrame) -> None:
-    groups = agent_version_groups(runs)
-    if len(groups) < 2:
-        return
-
-    rows: list[dict] = []
-    for ver, df in sorted(groups.items()):
-        wr = win_rate_pct(df) or 0.0
-        row: dict = {
-            "Version": version_label(ver),
-            "Runs": len(df),
-            "Win rate": f"{wr:.1f}%",
-            "Avg floor": round(float(df["floors_reached"].mean()), 1),
-            "Avg act": round(float(df["act_reached"].mean()), 1),
-            "Wins": int(df["won"].sum()),
-        }
-        hp_mean = mean_combat_hp_pct(df)
-        if hp_mean is not None:
-            row["Avg HP% combat"] = f"{hp_mean:.1f}%"
-        dur_mean = mean_run_duration_sec(df)
-        if dur_mean is not None:
-            row["Avg duration"] = format_duration(dur_mean)
-        if "run_score" in df.columns and df["run_score"].sum() > 0:
-            row["Avg score"] = round(float(df["run_score"].mean()), 0)
-        rows.append(row)
-
-    st.markdown("**Agent version comparison**")
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-
-def _metrics_block(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    if runs.empty:
-        st.caption("No runs for these filters.")
-        return
-
-    wr = win_rate_pct(runs) or 0.0
-    last10 = runs.tail(10)
-    prev10 = runs.iloc[-20:-10] if len(runs) >= 20 else runs.iloc[: max(0, len(runs) - 10)]
-    wr_last = last10["won"].mean() * 100 if len(last10) else 0
-    wr_prev = prev10["won"].mean() * 100 if len(prev10) else wr_last
-    delta_wr = wr_last - wr_prev
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Runs", len(runs))
-    c2.metric("Win Rate", f"{wr:.1f}%", delta=f"{delta_wr:+.1f}% vs prior 10")
-    c3.metric("Avg Floor", f"{runs['floors_reached'].mean():.1f}")
-
-    dur_mean = mean_run_duration_sec(runs)
-    has_score = "run_score" in runs.columns and runs["run_score"].sum() > 0
-    c4, c5, c6, c7 = st.columns(4)
-    c4.metric("Avg Act", f"{runs['act_reached'].mean():.1f}")
-    if dur_mean is not None:
-        c5.metric(
-            "Avg run duration",
-            format_duration(dur_mean),
-            help="Wall-clock time from first to last logged decision, or pipeline timer for new runs.",
-        )
-    else:
-        c5.caption("No duration data")
-    if has_score:
-        c6.metric("Avg run score", f"{runs['run_score'].mean():.0f}")
-    else:
-        c6.caption("-")
-    c7.metric("Wins", int(runs["won"].sum()))
-
-
-def section_metrics(
-    runs: pd.DataFrame,
-    runs_all: pd.DataFrame,
-    view_mode: str,
-    sidebar: dict,
-) -> None:
-    st.header("STS2 Agent Dashboard")
-    st.caption("Training logs only - hit **Reload data** in the sidebar after new runs")
-
-    if runs_all is not None and not runs_all.empty and "source" in runs_all.columns:
-        n_human = int((runs_all["source"] == "human").sum())
-        n_agent = int((runs_all["source"] != "human").sum())
-        ver_caption = version_count_caption(agent_runs_only(runs_all))
-        if view_mode == VIEW_COMPARE and n_human and n_agent:
-            st.info(
-                f"Human ({n_human}) vs agent ({n_agent}) runs. {ver_caption or ''}".strip()
-            )
-        elif view_mode == VIEW_HUMAN:
-            st.info("Imported `.run` files - reward picks from card_choices.jsonl.")
-        elif view_mode == VIEW_COMPARE_VERSIONS:
-            groups = agent_version_groups(runs)
-            if groups:
-                st.info(
-                    "Versions: " + ", ".join(version_label(v) for v in groups) + "."
-                )
-        elif view_mode == VIEW_AGENT:
-            groups = agent_version_groups(runs)
-            if len(groups) > 1:
-                st.info(version_count_caption(runs) + ".")
-
-    agent_for_summary = agent_runs_only(runs)
-    if view_mode in (VIEW_AGENT, VIEW_COMPARE_VERSIONS) or (
-        view_mode == VIEW_COMPARE and len(agent_version_groups(agent_for_summary)) > 1
-    ):
-        _version_summary_table(agent_for_summary)
-
-    if view_mode in (VIEW_AGENT, VIEW_COMPARE_VERSIONS) and not agent_for_summary.empty:
-        sel = sidebar.get("selected_versions") or []
-        if not sel:
-            st.warning("Select at least one agent version in the sidebar to see agent metrics.")
-
-    render_dashboard(view_mode, runs, _metrics_block)
-
-
-def _chart_win_rate(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    if runs.empty:
-        st.plotly_chart(empty_chart("Rolling win rate"), use_container_width=True)
-        return
-
-    rolling = compute_rolling_winrate(runs, 10)
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=runs["run_number"],
-            y=runs["won"].astype(int) * 100,
-            mode="lines+markers",
-            name="Per-run",
-            line={"color": "rgba(150,150,150,0.5)", "width": 1},
-            marker={"size": 4, "color": "rgba(150,150,150,0.6)"},
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=runs["run_number"],
-            y=rolling,
-            mode="lines",
-            name="10-run rolling avg",
-            line={"color": "#e74c3c", "width": 3},
-        )
-    )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=CHART_HEIGHT,
-        xaxis_title="Run #",
-        yaxis_title="Win rate %",
-        yaxis={"range": [0, 105]},
-        legend={"orientation": "h", "y": 1.12},
-        hovermode="x unified",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def _chart_win_rate_overlay(runs: pd.DataFrame) -> None:
-    """Single chart with one rolling win-rate line per agent_version."""
-    groups = agent_version_groups(runs)
-    if len(groups) < 2:
-        return
-
-    palette = px.colors.qualitative.Set1
-    fig = go.Figure()
-    for i, (ver, subset) in enumerate(sorted(groups.items())):
-        ordered = renumber_runs(subset)
-        rolling = compute_rolling_winrate(ordered, 10)
-        color = palette[i % len(palette)]
-        fig.add_trace(
-            go.Scatter(
-                x=ordered["run_number"],
-                y=rolling,
-                mode="lines",
-                name=version_label(ver),
-                line={"color": color, "width": 2.5},
-            )
-        )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=CHART_HEIGHT,
-        title="Rolling win rate by agent version (10-run window)",
-        xaxis_title="Run # (per version)",
-        yaxis_title="Win rate %",
-        yaxis={"range": [0, 105]},
-        legend={"orientation": "h", "y": 1.12},
-        hovermode="x unified",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def section_win_rate(runs: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Win Rate Over Time")
-    if view_mode in (VIEW_COMPARE_VERSIONS, VIEW_AGENT) and len(agent_version_groups(runs)) > 1:
-        _chart_win_rate_overlay(runs)
-    render_dashboard(view_mode, runs, _chart_win_rate)
-
-
-def _chart_death(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    left, right = st.columns(2)
-    with left:
-        if runs.empty:
-            st.plotly_chart(empty_chart("Floors reached"), use_container_width=True)
-        else:
-            floor_counts = runs["floors_reached"].value_counts().sort_index()
-            fig = px.bar(
-                x=floor_counts.index.astype(str),
-                y=floor_counts.values,
-                labels={"x": "Floor", "y": "Runs ended"},
-                title="Floors reached",
-                template=PLOTLY_TEMPLATE,
-            )
-            fig.update_layout(height=CHART_HEIGHT, showlegend=False)
-            st.plotly_chart(fig, use_container_width=True)
-    with right:
-        if runs.empty:
-            st.plotly_chart(empty_chart("Cause of death"), use_container_width=True)
-        else:
-            cats = runs["cause_of_death"].apply(parse_death_category)
-            pie_df = cats.value_counts().reset_index()
-            pie_df.columns = ["category", "count"]
-            fig = px.pie(
-                pie_df,
-                names="category",
-                values="count",
-                title="Cause of death",
-                template=PLOTLY_TEMPLATE,
-                hole=0.35,
-            )
-            fig.update_layout(height=CHART_HEIGHT)
-            st.plotly_chart(fig, use_container_width=True)
-
-
-def section_death(runs: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Where Does It Die?")
-    render_dashboard(view_mode, runs, _chart_death)
-
-
-def _chart_act_progression(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    if runs.empty:
-        st.plotly_chart(empty_chart("Act progression"), use_container_width=True)
-        return
-
-    def bucket(row: pd.Series) -> str:
-        if row.get("won"):
-            return "Won"
-        act = int(row.get("act_reached") or 1)
-        return f"Act {act} only"
-
-    subset = runs.copy()
-    subset["bucket"] = subset.apply(bucket, axis=1)
-    order = ["Act 1 only", "Act 2 only", "Act 3 only", "Won"]
-    counts = subset["bucket"].value_counts()
-    counts = counts.reindex([o for o in order if o in counts.index]).fillna(0)
-
-    fig = go.Figure(
-        data=[
-            go.Bar(
-                x=counts.index.tolist(),
-                y=counts.values.tolist(),
-                marker_color=["#3498db", "#9b59b6", "#e67e22", "#2ecc71"][: len(counts)],
-            )
-        ]
-    )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=CHART_HEIGHT,
-        title="Highest act / victory",
-        xaxis_title="Outcome",
-        yaxis_title="Runs",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def section_act_progression(runs: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Act Progression")
-    render_dashboard(view_mode, runs, _chart_act_progression)
-
-
-def _chart_combat(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    hp_pct = combat_hp_pct_series(runs)
-    mean_hp = mean_combat_hp_pct(runs)
-
-    left, right = st.columns(2)
-    with left:
-        if mean_hp is not None:
-            st.metric(
-                "Avg HP% after combat",
-                f"{mean_hp:.1f}%",
-                help="Mean HP remaining after each fight, averaged over the run (0-100%). "
-                "Comparable across runs that end at different floors.",
-            )
-        if runs.empty or hp_pct.dropna().empty:
-            st.plotly_chart(
-                empty_chart(
-                    "HP% after combat per run",
-                    "No avg_hp_pct_after_combat in runs - re-import or run the agent with current pipeline",
-                ),
-                use_container_width=True,
-            )
-        else:
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=runs["run_number"],
-                    y=hp_pct,
-                    mode="lines+markers",
-                    name="HP% after combat",
-                    line={"color": "#2ecc71"},
-                    connectgaps=False,
-                )
-            )
-            if mean_hp is not None:
-                fig.add_hline(
-                    y=mean_hp,
-                    line_dash="dash",
-                    line_color="#95a5a6",
-                    annotation_text=f"mean {mean_hp:.1f}%",
-                    annotation_position="right",
-                )
-            fig.update_layout(
-                template=PLOTLY_TEMPLATE,
-                height=CHART_HEIGHT,
-                title="HP% after combat per run",
-                xaxis_title="Run #",
-                yaxis_title="Avg HP% after combat",
-                yaxis={"range": [0, 100]},
-            )
-            st.plotly_chart(fig, use_container_width=True)
-    with right:
-        if runs.empty:
-            st.plotly_chart(empty_chart("Damage dealt"), use_container_width=True)
-        else:
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=runs["run_number"],
-                    y=runs["total_damage_dealt"],
-                    mode="lines+markers",
-                    name="Damage dealt",
-                    line={"color": "#3498db"},
-                )
-            )
-            if runs["total_damage_dealt"].sum() == 0:
-                fig.add_annotation(
-                    text="No damage-dealt tracking in pipeline",
-                    xref="paper",
-                    yref="paper",
-                    x=0.5,
-                    y=0.5,
-                    showarrow=False,
-                    font={"size": 12, "color": "#888"},
-                )
-            fig.update_layout(
-                template=PLOTLY_TEMPLATE,
-                height=CHART_HEIGHT,
-                title="Damage dealt per run",
-                xaxis_title="Run #",
-                yaxis_title="Total damage dealt",
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-
-def _chart_run_timing(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    dur_mean = mean_run_duration_sec(runs)
-    if dur_mean is not None:
-        st.metric(
-            "Avg run duration",
-            format_duration(dur_mean),
-            help="Comparable across versions - longer runs are not penalized in this average.",
-        )
-
-    if runs.empty or "run_duration_sec" not in runs.columns:
-        st.plotly_chart(empty_chart("Run duration"), use_container_width=True)
-        return
-
-    durations = runs["run_duration_sec"].dropna()
-    durations = durations[durations > 0]
-    if durations.empty:
-        st.plotly_chart(
-            empty_chart(
-                "Run duration",
-                "No timing data - agent runs need decisions.jsonl or run_duration_sec in runs.jsonl",
-            ),
-            use_container_width=True,
-        )
-        return
-
-    plot_df = runs.loc[durations.index].copy()
-    plot_df["duration_min"] = plot_df["run_duration_sec"] / 60.0
-
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=plot_df["run_number"],
-            y=plot_df["duration_min"],
-            mode="lines+markers",
-            name="Duration",
-            line={"color": "#9b59b6"},
-            connectgaps=False,
-        )
-    )
-    if dur_mean is not None:
-        fig.add_hline(
-            y=dur_mean / 60.0,
-            line_dash="dash",
-            line_color="#95a5a6",
-            annotation_text=f"mean {format_duration(dur_mean)}",
-            annotation_position="right",
-        )
-    fig.update_layout(
-        template=PLOTLY_TEMPLATE,
-        height=CHART_HEIGHT,
-        title="Run duration",
-        xaxis_title="Run #",
-        yaxis_title="Minutes",
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def _chart_run_timing_by_version(runs: pd.DataFrame) -> None:
-    """Bar chart of mean duration per agent_version (filtered agent runs)."""
-    agent = agent_runs_only(runs)
-    if agent.empty or "agent_version" not in agent.columns:
-        st.info("No version-tagged agent runs.")
-        return
-    groups = agent_version_groups(agent)
-    rows: list[dict] = []
-    for ver, df in groups.items():
-        mean_sec = mean_run_duration_sec(df)
-        if mean_sec is None:
-            continue
-        rows.append(
-            {
-                "version": version_label(ver),
-                "duration_min": mean_sec / 60.0,
-                "runs": len(df),
-            }
-        )
-    if not rows:
-        st.info("No duration data yet.")
-        return
-    bar_df = pd.DataFrame(rows)
-    fig = px.bar(
-        bar_df,
-        x="version",
-        y="duration_min",
-        title="Average run duration by agent version",
-        labels={"duration_min": "Avg minutes", "version": "Agent version"},
-        template=PLOTLY_TEMPLATE,
-        text=bar_df["runs"].apply(lambda n: f"{n} runs"),
-    )
-    fig.update_traces(textposition="outside")
-    fig.update_layout(height=CHART_HEIGHT, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def section_run_timing(runs: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Run timing")
-    st.caption(
-        "Run length from runs.jsonl timestamps, or first/last decision row if missing."
-    )
-    if view_mode == VIEW_COMPARE_VERSIONS:
-        _chart_run_timing_by_version(runs)
-        st.divider()
-    render_dashboard(view_mode, runs, _chart_run_timing)
-
-
-def section_combat(runs: pd.DataFrame, decisions: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Combat")
-    st.caption("Avg HP% left after each fight (per run). Comparable across short and long runs.")
-    render_dashboard(view_mode, runs, _chart_combat)
-    if view_mode == VIEW_HUMAN:
-        st.caption("Combat plays need agent decisions.jsonl.")
-    elif view_mode == VIEW_COMPARE:
-        st.caption("HP% per source; damage on the right. Card picks split by agent version.")
-
-
-def _agent_reward_picks(decisions: pd.DataFrame) -> list[str]:
-    if decisions.empty:
-        return []
-    picks = decisions[
-        (decisions["state_type"] == "card_reward")
-        & (decisions["action"] == "select_card_reward")
-    ]
-    return picks.apply(card_pick_label_from_row, axis=1).dropna().astype(str).tolist()
-
-
-def _chart_card_picks(pick_names: list[str], title: str) -> None:
-    top = Counter(pick_names).most_common(10)
-    if not top:
-        st.plotly_chart(empty_chart("Card picks", "No reward picks"), use_container_width=True)
-        return
-    pdf = pd.DataFrame(top, columns=["card", "picks"])
-    fig = px.bar(
-        pdf,
-        x="picks",
-        y="card",
-        orientation="h",
-        title=title,
-        template=PLOTLY_TEMPLATE,
-    )
-    fig.update_layout(height=CHART_HEIGHT, yaxis={"categoryorder": "total ascending"})
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def _chart_combat_plays(decisions: pd.DataFrame, title: str) -> None:
-    if decisions.empty:
-        st.plotly_chart(empty_chart("Combat plays", "Agent runs only"), use_container_width=True)
-        return
-    combat = decisions[decisions["state_type"].isin(["monster", "elite", "boss", "hand_select"])]
-    played = combat.apply(card_played_name, axis=1).dropna()
-    top = Counter(played).most_common(10)
-    if not top:
-        st.plotly_chart(empty_chart("Combat plays", "No plays logged yet"), use_container_width=True)
-        return
-    pdf = pd.DataFrame(top, columns=["card", "plays"])
-    fig = px.bar(
-        pdf,
-        x="plays",
-        y="card",
-        orientation="h",
-        title=title,
-        template=PLOTLY_TEMPLATE,
-    )
-    fig.update_layout(height=CHART_HEIGHT, yaxis={"categoryorder": "total ascending"})
-    st.plotly_chart(fig, use_container_width=True)
-
-
-def _card_intel_agent_panel(decisions: pd.DataFrame, label: str) -> None:
-    """Reward picks + combat plays for one agent_version."""
-    st.markdown(f"##### {label}")
-    if decisions.empty:
-        st.caption("No decisions for this version.")
-        return
-    left, right = st.columns(2)
-    with left:
-        pick_names = _agent_reward_picks(decisions)
-        _chart_card_picks(
-            pick_names,
-            f"Top 10 reward picks ({len(pick_names)})",
-        )
-    with right:
-        _chart_combat_plays(decisions, "Top 10 combat plays")
-
-
-def render_card_intel_by_agent(decisions: pd.DataFrame, runs: pd.DataFrame) -> None:
-    groups = agent_decisions_by_version(decisions, runs)
-    if not groups:
-        st.caption("No agent decisions for these filters.")
-        return
-    if len(groups) == 1:
-        ver, subset = next(iter(groups.items()))
-        _card_intel_agent_panel(subset, version_label(ver))
-        return
-    versions = list(groups.keys())
-    cols = st.columns(len(versions))
-    for col, ver in zip(cols, versions):
-        with col:
-            _card_intel_agent_panel(groups[ver], version_label(ver))
-
-
-def section_cards(
-    decisions: pd.DataFrame,
-    card_choices: pd.DataFrame,
-    runs: pd.DataFrame,
-    view_mode: str,
-    *,
-    filter_label: str | None = None,
-) -> None:
-    st.subheader("Card picks & plays")
-    if filter_label:
-        st.caption(filter_label)
-    if view_mode in (VIEW_AGENT, VIEW_COMPARE_VERSIONS):
-        st.caption("One column per agent version.")
-    elif view_mode == VIEW_COMPARE:
-        st.caption("Human on the left; agent versions on the right.")
-
-    if view_mode == VIEW_COMPARE:
-        col_h, col_a = st.columns(2)
-        with col_h:
-            st.markdown("##### Human - reward picks")
-            human_names = (
-                card_choices["picked"].dropna().astype(str).tolist()
-                if not card_choices.empty and "picked" in card_choices.columns
-                else []
-            )
-            _chart_card_picks(human_names, f"Top 10 ({len(human_names)} picks)")
-        with col_a:
-            render_card_intel_by_agent(decisions, runs)
-        return
-
-    if view_mode == VIEW_HUMAN:
-        left, right = st.columns(2)
-        with left:
-            human_names = (
-                card_choices["picked"].dropna().astype(str).tolist()
-                if not card_choices.empty and "picked" in card_choices.columns
-                else []
-            )
-            _chart_card_picks(human_names, f"Top 10 human reward picks ({len(human_names)})")
-        with right:
-            st.plotly_chart(
-                empty_chart("Combat plays", "Not available for human imports"),
-                use_container_width=True,
-            )
-        return
-
-    render_card_intel_by_agent(decisions, runs)
-
-
-def _deck_stats_block(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    if runs.empty:
-        st.caption("No runs for these filters.")
-        return
-
-    st.metric("Avg deck size at death", f"{runs['deck_size'].mean():.1f}")
-    wins = runs[runs["won"]]
-    losses = runs[~runs["won"]]
-    left, right = st.columns(2)
-
-    def deck_counter(subset: pd.DataFrame) -> Counter:
-        c: Counter = Counter()
-        for deck in subset.get("final_deck", []):
-            if isinstance(deck, list):
-                c.update(deck)
-        return c
-
-    with left:
-        st.markdown("**Winning runs - top cards**")
-        wc = deck_counter(wins).most_common(8)
-        if wc:
-            st.table(pd.DataFrame(wc, columns=["card", "count"]))
-        else:
-            st.caption("No winning runs yet.")
-    with right:
-        st.markdown("**Losing runs - top cards**")
-        lc = deck_counter(losses).most_common(8)
-        if lc:
-            st.table(pd.DataFrame(lc, columns=["card", "count"]))
-        else:
-            st.caption("No data.")
-    relics: Counter = Counter()
-    for rel_list in wins.get("final_relics", []):
-        if isinstance(rel_list, list):
-            relics.update(rel_list)
-    if relics:
-        st.caption("Relics in wins: " + ", ".join(f"{n} ({c})" for n, c in relics.most_common(8)))
-
-
-def section_deck_stats(runs: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Deck Stats")
-    if view_mode in (VIEW_COMPARE, VIEW_COMPARE_VERSIONS, VIEW_AGENT):
-        render_dashboard(view_mode, runs, _deck_stats_block)
-        return
-    if runs.empty:
-        st.info("No runs for these filters.")
-        return
-    _deck_stats_block(runs, None)
-
-
-def _recent_runs_table(runs: pd.DataFrame, label: str | None) -> None:
-    if label:
-        st.markdown(f"##### {label}")
-    if runs.empty:
-        st.caption("No runs.")
-        return
-
-    display = runs.tail(20).iloc[::-1].copy()
-    display["run_id_short"] = display["run_id"].astype(str).str[:8] + "…"
-    display["result"] = display["won"].map({True: "Win", False: "Loss"})
-    display["when"] = display["timestamp"].dt.strftime("%Y-%m-%d %H:%M")
-
-    cols = [
-        "run_id_short",
-        "when",
-        "result",
-        "floors_reached",
-        "act_reached",
-        "cause_of_death",
-        "deck_size",
-        "total_damage_taken",
-    ]
-    if "run_duration_sec" in display.columns and display["run_duration_sec"].notna().any():
-        cols.insert(4, "run_duration_sec")
-        display["run_duration_sec"] = display["run_duration_sec"].apply(
-            lambda s: format_duration(float(s)) if pd.notna(s) and float(s) > 0 else "-"
-        )
-    rename = {
-        "run_id_short": "Run ID",
-        "when": "Time",
-        "result": "Result",
-        "floors_reached": "Floor",
-        "act_reached": "Act",
-        "cause_of_death": "Cause of death",
-        "deck_size": "Deck size",
-        "total_damage_taken": "Dmg taken",
-        "run_duration_sec": "Duration",
-    }
-    if "run_score" in display.columns:
-        cols.insert(3, "run_score")
-        rename["run_score"] = "Score"
-    if "agent_version" in display.columns:
-        cols.insert(3, "agent_version")
-        rename["agent_version"] = "Version"
-
-    table = display[cols].rename(columns=rename)
-
-    def row_style(row: pd.Series) -> list[str]:
-        if row.get("Result") == "Win":
-            return ["background-color: rgba(46, 204, 113, 0.15)"] * len(row)
-        return ["background-color: rgba(231, 76, 60, 0.12)"] * len(row)
-
-    styled = table.style.apply(row_style, axis=1)
-    st.dataframe(styled, use_container_width=True, hide_index=True)
-
-
-def section_recent_runs(runs: pd.DataFrame, view_mode: str, sidebar: dict) -> None:
-    st.subheader("Recent Runs")
-    if view_mode in (VIEW_COMPARE, VIEW_COMPARE_VERSIONS, VIEW_AGENT):
-        render_dashboard(view_mode, runs, _recent_runs_table)
-        return
-    if runs.empty:
-        st.info("No runs for these filters.")
-        return
-    _recent_runs_table(runs, None)
-
-
-def section_decision_explorer(
-    runs: pd.DataFrame,
-    decisions: pd.DataFrame,
-    card_choices: pd.DataFrame,
-) -> None:
-    st.subheader("Decision Explorer")
-    if runs.empty:
-        st.info("No runs in dataset.")
-        return
-
-    def run_label(row: pd.Series) -> str:
-        src = row.get("source", "agent")
-        if src == "human":
-            tag = "human"
-        else:
-            ver = row.get("agent_version", "")
-            tag = f"agent/{ver}" if ver else "agent"
-        rid = str(row["run_id"])
-        short = rid[:8] + "…" if len(rid) > 8 else rid
-        result = "Win" if row["won"] else "Loss"
-        return f"[{tag}] {short} - {result} - floor {row['floors_reached']}"
-
-    options = {run_label(row): row["run_id"] for _, row in runs.iloc[::-1].iterrows()}
-    run_labels = list(options.keys())
-    if not run_labels:
-        return
-    if FILTER_DECISION_RUN not in st.session_state or st.session_state[FILTER_DECISION_RUN] not in run_labels:
-        st.session_state[FILTER_DECISION_RUN] = run_labels[0]
-    label = st.selectbox("Select run", run_labels, key=FILTER_DECISION_RUN)
-    run_id = options[label]
-
-    run_row = runs[runs["run_id"] == run_id].iloc[0]
-    run_dec = decisions[decisions["run_id"] == run_id].sort_values(["floor", "timestamp"])
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Result", "Win" if run_row["won"] else "Loss")
-    c2.metric("Floors", int(run_row["floors_reached"]))
-    c3.metric("Decisions", len(run_dec))
-    c4.metric("Damage taken", int(run_row["total_damage_taken"]))
-
-    if run_dec.empty:
-        human_picks = card_choices[card_choices["run_id"] == run_id] if not card_choices.empty else pd.DataFrame()
-        if not human_picks.empty:
-            st.markdown("**Human card reward picks** (from imported .run file)")
-            st.dataframe(
-                human_picks[
-                    ["floor", "act", "floor_type", "offered", "picked", "hp_at_pick"]
-                ],
-                use_container_width=True,
-                hide_index=True,
-            )
-        else:
-            st.warning(
-                "No agent decisions logged for this run. "
-                "Human imports do not populate decisions.jsonl."
-            )
-        return
-
-    timeline = run_dec[
-        ["floor", "act", "state_type", "action", "immediate_reward", "action_reasoning"]
-    ].copy()
-    timeline["reward"] = timeline["immediate_reward"].apply(
-        lambda x: f"{x:.1f}" if pd.notna(x) else "-"
-    )
-
-    def highlight_negative(row: pd.Series) -> list[str]:
-        val = row.get("immediate_reward")
-        if pd.notna(val) and float(val) < 0:
-            return ["background-color: rgba(231, 76, 60, 0.25)"] * len(row)
-        return [""] * len(row)
-
-    st.markdown("**Decision timeline**")
-    st.dataframe(
-        timeline.drop(columns=["immediate_reward"]).style.apply(highlight_negative, axis=1),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-
 def main() -> None:
     st.set_page_config(
         page_title="STS2 Agent Dashboard",
         page_icon="🃏",
         layout="wide",
         initial_sidebar_state="expanded",
+    )
+
+    from dashboard.sections import (
+        section_cards,
+        section_combat_efficiency,
+        section_death,
+        section_health,
     )
 
     revision = _data_revision_key()
@@ -1600,48 +862,87 @@ def main() -> None:
     runs_raw = enrich_runs_with_duration(runs_raw, decisions_raw)
     sidebar = render_sidebar(runs_raw)
 
-    view_mode = sidebar.get("view_mode", VIEW_COMPARE)
-    runs, decisions, card_choices = apply_filters(
+    runs_overview, _, _ = apply_filters(
         runs_raw, decisions_raw, card_choices_raw, sidebar
     )
 
-    card_filter_parts: list[str] = []
-    if view_mode in (VIEW_HUMAN, VIEW_COMPARE) and not card_choices.empty:
-        card_filter_parts.append(f"{len(card_choices)} human reward picks")
-    if view_mode in (VIEW_AGENT, VIEW_COMPARE, VIEW_COMPARE_VERSIONS) and not decisions.empty:
-        card_filter_parts.append(f"{len(decisions)} agent decisions")
-    if sidebar.get("character") and sidebar["character"] != "All":
-        card_filter_parts.append(sidebar["character"])
-    card_filter_label = " · ".join(card_filter_parts) if card_filter_parts else None
+    runs_scoped, _, _ = apply_filters(
+        runs_raw,
+        decisions_raw,
+        card_choices_raw,
+        sidebar,
+        skip_version_filter=True,
+    )
+    detail_versions = available_agent_versions(runs_scoped)
+    default_detail = current_agent_version(runs_scoped)
+    if default_detail and default_detail not in detail_versions:
+        detail_versions = sorted(set(detail_versions) | {default_detail})
 
     tab_runs, tab_compendium = st.tabs(["Run analytics", "Enemy compendium"])
 
     with tab_runs:
-        section_metrics(runs, runs_raw, view_mode, sidebar)
+        st.title("STS2 Agent Dashboard")
+        st.caption("Phase A analytics — reload sidebar after new runs")
+        section_health(runs_overview)
         st.divider()
-        section_run_timing(runs, view_mode, sidebar)
-        st.divider()
-        section_win_rate(runs, view_mode, sidebar)
-        st.divider()
-        section_death(runs, view_mode, sidebar)
-        st.divider()
-        section_act_progression(runs, view_mode, sidebar)
-        st.divider()
-        section_combat(runs, decisions, view_mode, sidebar)
-        st.divider()
-        section_cards(
-            decisions,
-            card_choices,
-            runs,
-            view_mode,
-            filter_label=card_filter_label,
+
+        from dashboard.sections import render_detail_version_picker
+
+        detail_version = render_detail_version_picker(detail_versions, default_detail)
+        if detail_version:
+            runs_detail, decisions_detail, card_choices_detail = apply_filters(
+                runs_raw,
+                decisions_raw,
+                card_choices_raw,
+                sidebar,
+                agent_versions=[detail_version],
+            )
+        else:
+            runs_detail, decisions_detail, card_choices_detail = (
+                runs_scoped.iloc[0:0],
+                decisions_raw.iloc[0:0],
+                card_choices_raw.iloc[0:0],
+            )
+            st.info("No agent versions in dataset for detailed analysis.")
+            phase_b_count, phase_b_total = 0, 0
+
+        if detail_version:
+            from dashboard.metrics import filter_detail_phase_b
+
+            (
+                runs_detail,
+                decisions_detail,
+                card_choices_detail,
+                phase_b_count,
+                phase_b_total,
+            ) = filter_detail_phase_b(
+                runs_detail, decisions_detail, card_choices_detail
+            )
+
+        section_death(
+            runs_detail,
+            decisions_detail,
+            agent_version=detail_version,
+            phase_b_count=phase_b_count,
+            phase_b_total=phase_b_total,
         )
         st.divider()
-        section_deck_stats(runs, view_mode, sidebar)
+        section_cards(
+            runs_detail,
+            decisions_detail,
+            card_choices_detail,
+            agent_version=detail_version,
+            phase_b_count=phase_b_count,
+            phase_b_total=phase_b_total,
+        )
         st.divider()
-        section_recent_runs(runs, view_mode, sidebar)
-        st.divider()
-        section_decision_explorer(runs, decisions, card_choices)
+        section_combat_efficiency(
+            runs_detail,
+            decisions_detail,
+            agent_version=detail_version,
+            phase_b_count=phase_b_count,
+            phase_b_total=phase_b_total,
+        )
 
         st.caption(
             f"Data: `{RUNS_PATH.relative_to(PROJECT_ROOT)}` · "

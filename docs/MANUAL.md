@@ -31,6 +31,7 @@ Reference for layout, APIs, and where to change behavior. Use the TOC to jump ar
 - [Model checkpoint lineage](MODEL_LINEAGE.md) — BC/PPO version history, collapse notes, artifact paths.
 - [Qwen + PPO roadmap](QWEN_PPO_ROADMAP.md) — strategic LLM layer, prerequisites, integration phases, risks.
 - [Patch management](PATCH_MANAGEMENT.md) — balance patch impact levels, retrain triggers, data versioning.
+- [Dashboard spec](DASHBOARD.md) — Phase A metrics, sections, Phase B backlog.
 
 ---
 
@@ -583,7 +584,17 @@ When predicted move matches resolved live intent (compendium decisions on), `ver
 1. **Start:** New `run_id` (UUID), reset combat trackers  
 2. **Each tick:** `observe_state` updates floor/act/deck snapshots  
 3. **Each decision:** `record_handler_decision` appends to buffer → flush to `decisions.jsonl`  
-4. **End:** On `game_over` or run end → write row to `runs.jsonl` with `run_score`, HP per combat, etc.
+4. **End:** On `game_over` or run end → write row to `runs.jsonl` with `run_score`, HP per combat, `combat_summary[]`, `killing_enemy` (losses), etc.
+
+### Phase B fields (new runs)
+
+| Where | Field | Meaning |
+|-------|-------|---------|
+| `decisions.jsonl` | `card_reward_offered` | All offered card names on each `card_reward` step |
+| `runs.jsonl` | `combat_summary[]` | Per-fight structured stats (enemies, turns, damage, HP, outcome) |
+| `runs.jsonl` | `killing_enemy` | Structured killer on combat death (`name`, `entity_id`, `compendium_key`, `intent`) |
+
+See [DASHBOARD.md](DASHBOARD.md) for schema details.
 
 ### Combat tracking
 
@@ -711,19 +722,30 @@ Normalized via `characters.normalize_character_name()` → e.g. `"The Ironclad"`
 
 **Job:** Streamlit UI for run analytics and the learned enemy compendium.
 
+Full metric definitions: **[DASHBOARD.md](DASHBOARD.md)**.
+
 ### Tabs
 
 | Tab | Content |
 |-----|---------|
-| **Run analytics** | Win rate, deaths, combat stats, card picks, decision explorer (same as before) |
-| **Enemy compendium** | Browse/edit `data/enemy_compendium.json` - learned cycles, moves, damage, tags, fight count |
+| **Run analytics** | Four Phase A sections: health, deaths, cards, combat efficiency |
+| **Enemy compendium** | Browse/edit `data/enemy_compendium.json` (unchanged) |
+
+### Run analytics sections
+
+1. **Health** — per-version floor/score/duration, rolling trends (50 runs), 15% early-warning vs other versions, `game_version` caption.
+2. **Deaths** — floor histogram, death category, parsed enemy killer, act/HP charts, turns per fight, damage per fight, human run-total damage benchmark.
+3. **Cards** — agent/human pick rates, Mobalytics tier of picks, human tier-miss, deck win/loss cards.
+4. **Combat efficiency** — block %, potion hoarding at death, energy left on end_turn, damage-dealt histogram.
+
+Removed in Phase A: win rate over time, run timing, act progression buckets, recent runs table, decision explorer.
 
 ### Enemy compendium tab
 
-- **Encounter type** dropdown - groups slots by `base_name` (e.g. all Decimillipede segments)  
-- **Slot overview table** - `decimillipede/front`, `…/middle`, `…/back`, fight counts, cycle length  
-- Per-slot: **learned turn order**, moves table (tags include buff/debuff), recent sequences with `entity_id`  
-- Delete individual compendium entry (advanced JSON expander)  
+- **Encounter type** dropdown - groups slots by `base_name` (e.g. all Decimillipede segments)
+- **Slot overview table** - `decimillipede/front`, `…/middle`, `…/back`, fight counts, cycle length
+- Per-slot: **learned turn order**, moves table (tags include buff/debuff), recent sequences with `entity_id`
+- Delete individual compendium entry (advanced JSON expander)
 
 Data is **written by the agent** during play; the dashboard is for review (not the old CSV/spreadsheet workflow).
 
@@ -731,23 +753,11 @@ Data is **written by the agent** during play; the dashboard is for review (not t
 
 | Filter | Effect |
 |--------|--------|
-| **View** | Human only / Agent only / Compare (side-by-side, never blended) |
+| **View** | Human only / Agent only / Compare / Compare versions |
+| **Agent versions** | Multiselect which tags to include |
 | Character | Filter by character |
 | Ascension | Filter by ascension |
 | Date filter | All time / last month / … / custom |
-
-### Sections
-
-| Section | Data source |
-|---------|-------------|
-| Metrics | `runs.jsonl` |
-| Win rate chart | `runs.jsonl` |
-| Death / act charts | `runs.jsonl` |
-| Combat | `runs.jsonl` (agent damage) + `decisions.jsonl` |
-| Card intelligence | Human: `card_choices.jsonl`, Agent: `decisions.jsonl` |
-| Deck stats | `runs.jsonl` final decks |
-| Recent runs | `runs.jsonl` |
-| Decision explorer | `decisions.jsonl` + human card picks |
 
 Note: Human runs have **no** `decisions.jsonl` rows - only run-level stats and card picks.
 

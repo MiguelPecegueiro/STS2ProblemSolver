@@ -111,6 +111,36 @@ def extract_card_reward_cards(state: dict) -> list[dict]:
     return []
 
 
+def card_reward_name_for_index(state: dict, card_index: int) -> str | None:
+    """Resolve API card_index on card_reward screen to a display name."""
+    try:
+        target = int(card_index)
+    except (TypeError, ValueError):
+        return None
+    for fallback, card in enumerate(extract_card_reward_cards(state)):
+        if card_reward_index(card, fallback) == target:
+            name = str(card.get("name") or "").strip()
+            cid = str(card.get("id") or "").strip()
+            return name or (cid.upper().replace(" ", "_") if cid else None)
+    return None
+
+
+def extract_card_reward_offered(state: dict) -> list[str]:
+    """Card names (or ids) for every option on the reward screen."""
+    offered: list[str] = []
+    for card in extract_card_reward_cards(state):
+        if not isinstance(card, dict):
+            continue
+        name = str(card.get("name") or "").strip()
+        cid = str(card.get("id") or "").strip()
+        label = name
+        if not label and cid:
+            label = cid.upper().replace(" ", "_")
+        if label:
+            offered.append(label)
+    return offered
+
+
 def card_reward_can_skip(state: dict) -> bool:
     screen = state.get("card_reward")
     if isinstance(screen, dict):
