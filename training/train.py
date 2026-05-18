@@ -94,6 +94,7 @@ def train(
     batch_size: int,
     lr: float,
     min_run_score_percentile: float,
+    min_game_version: str | None,
     human_weight: float,
     val_fraction: float,
     seed: int,
@@ -105,6 +106,7 @@ def train(
     train_ds, val_ds, vocab, meta = build_datasets(
         decisions_path,
         min_run_score_percentile=min_run_score_percentile,
+        min_game_version=min_game_version,
         human_weight=human_weight,
         val_fraction=val_fraction,
         seed=seed,
@@ -195,6 +197,7 @@ def train(
             "batch_size": batch_size,
             "lr": lr,
             "min_run_score_percentile": min_run_score_percentile,
+            "min_game_version": min_game_version,
             "human_weight": human_weight,
             "val_fraction": val_fraction,
             "seed": seed,
@@ -239,6 +242,12 @@ def parse_args() -> argparse.Namespace:
         help="Drop runs below this run_score percentile (0-100)",
     )
     parser.add_argument(
+        "--min-game-version",
+        default=None,
+        metavar="ID",
+        help="Only train on runs/decisions with game_version >= this (YYYY.MM.DD)",
+    )
+    parser.add_argument(
         "--human-weight",
         type=float,
         default=3.0,
@@ -260,6 +269,7 @@ def main() -> int:
         batch_size=args.batch_size,
         lr=args.lr,
         min_run_score_percentile=args.min_run_score_percentile,
+        min_game_version=args.min_game_version,
         human_weight=args.human_weight,
         val_fraction=args.val_fraction,
         seed=args.seed,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import queue
 import threading
 from collections import deque
@@ -70,6 +71,32 @@ ENEMY_INTENT_HISTORY_LEN = 3
 
 # Default tag for runs before main.py calls set_agent_version() (keep in sync with main.AGENT_VERSION_RULES).
 DEFAULT_AGENT_VERSION = "rules_v1"
+DEFAULT_GAME_VERSION = "unknown"
+
+_game_version: str = DEFAULT_GAME_VERSION
+
+
+def resolve_game_version(explicit: str | None = None) -> str:
+    """Resolve patch id from CLI, then STS2_GAME_VERSION env, else 'unknown'."""
+    if explicit is not None and str(explicit).strip():
+        return str(explicit).strip()
+    env = os.environ.get("STS2_GAME_VERSION", "").strip()
+    if env:
+        return env
+    return DEFAULT_GAME_VERSION
+
+
+def get_game_version() -> str:
+    return _game_version
+
+
+def set_game_version(version: str | None = None) -> str:
+    """Tag subsequent runs/decisions (e.g. 2026.05.18)."""
+    global _game_version
+    _game_version = resolve_game_version(version)
+    if _pipeline is not None:
+        _pipeline._game_version = _game_version
+    return _game_version
 
 
 def _utc_now() -> str:
@@ -301,6 +328,7 @@ class DataPipeline:
         self._last_state_type: str | None = None
         self._last_run_summary: dict | None = None
         self._agent_version: str = DEFAULT_AGENT_VERSION
+        self._game_version: str = _game_version
         self._run_started_at: datetime | None = None
 
         # Combat session tracking
@@ -554,6 +582,7 @@ class DataPipeline:
             "timestamp": _utc_now(),
             "collector_instance": _collector_instance,
             "agent_version": self._agent_version,
+            "game_version": self._game_version,
             "floor": _safe_int(run.get("floor")),
             "act": _safe_int(run.get("act"), 1),
             "state_type": state_type,
@@ -900,6 +929,7 @@ class DataPipeline:
             "collector_instance": _collector_instance,
             "source": "agent",
             "agent_version": self._agent_version,
+            "game_version": self._game_version,
             "character": self._character,
             "ascension": self._ascension,
             "won": won,

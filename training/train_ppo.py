@@ -91,6 +91,7 @@ def train_ppo(
     value_loss_coef: float,
     entropy_coef: float,
     min_run_score_percentile: float,
+    min_game_version: str | None,
     val_fraction: float,
     seed: int,
     device_name: str,
@@ -113,6 +114,7 @@ def train_ppo(
         decisions_path,
         gamma=gamma,
         min_run_score_percentile=min_run_score_percentile,
+        min_game_version=min_game_version,
         val_fraction=val_fraction,
         seed=seed,
         terminal_reward_scale=terminal_reward_scale,
@@ -350,6 +352,7 @@ def train_ppo(
             "batch_size": batch_size,
             "terminal_reward_scale": terminal_reward_scale,
             "min_run_score_percentile": min_run_score_percentile,
+            "min_game_version": min_game_version,
             "val_fraction": val_fraction,
             "seed": seed,
         },
@@ -398,6 +401,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--terminal-reward-scale", type=float, default=1.0)
     parser.add_argument("--max-grad-norm", type=float, default=0.5)
     parser.add_argument("--min-run-score-percentile", type=float, default=25.0)
+    parser.add_argument(
+        "--min-game-version",
+        default=None,
+        metavar="ID",
+        help="Only train on runs/decisions with game_version >= this (YYYY.MM.DD)",
+    )
     parser.add_argument("--val-fraction", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
@@ -422,6 +431,7 @@ def main() -> int:
         value_loss_coef=args.value_loss_coef,
         entropy_coef=args.entropy_coef,
         min_run_score_percentile=args.min_run_score_percentile,
+        min_game_version=args.min_game_version,
         val_fraction=args.val_fraction,
         seed=args.seed,
         device_name=args.device,

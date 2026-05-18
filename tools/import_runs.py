@@ -392,6 +392,7 @@ def import_runs(
     runs_path: Path = RUNS_PATH,
     card_choices_path: Path = CARD_CHOICES_PATH,
     min_bytes: int = MIN_FILE_BYTES,
+    game_version: str | None = None,
 ) -> tuple[int, int, int, int, int, int]:
     folder = folder.expanduser().resolve()
     if not folder.is_dir():
@@ -430,6 +431,8 @@ def import_runs(
             continue
 
         record, choices = parsed
+        if game_version:
+            record["game_version"] = game_version
         run_rows.append(record)
         choice_rows.extend(choices)
         existing_ids.add(run_id)
@@ -470,10 +473,20 @@ def main() -> int:
         default=MIN_FILE_BYTES,
         help="Skip .run files smaller than this (default: 5120)",
     )
+    parser.add_argument(
+        "--game-version",
+        default=None,
+        metavar="ID",
+        help="Tag imported runs (default: STS2_GAME_VERSION env or 'unknown')",
+    )
     args = parser.parse_args()
 
     import_dir = args.folder.expanduser().resolve()
     import_dir.mkdir(parents=True, exist_ok=True)
+
+    from sts2_agent.data_pipeline import resolve_game_version
+
+    game_version = resolve_game_version(args.game_version)
 
     try:
         imported, skipped, total, skip_dup, skip_small, skip_err = import_runs(
@@ -481,6 +494,7 @@ def main() -> int:
             runs_path=args.runs_out,
             card_choices_path=args.choices_out,
             min_bytes=args.min_bytes,
+            game_version=game_version,
         )
     except FileNotFoundError as exc:
         print(exc)

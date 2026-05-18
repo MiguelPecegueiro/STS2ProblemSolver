@@ -83,11 +83,30 @@ If the scoring formula changes:
 
 ## Data management
 
-### Game version tagging (required practice)
+### Game version tagging
 
-**Today:** runs record `agent_version`, `character`, `ascension`, timestamps (`sts2_agent/data_pipeline.py` → `data/runs.jsonl`). Decisions mirror `agent_version` in `data/decisions.jsonl`.
+Every agent run and decision row includes **`game_version`** — the balance patch the data was collected on.
 
-**Target:** add a stable **`game_version`** (or `patch_id`) field on every run and decision, set at run start from config/env, e.g.:
+**Set the tag when starting agents:**
+
+```bash
+# CLI (preferred for parallel instances)
+python -m sts2_agent.main --game-version 2026.05.18 --policy ...
+
+# Or environment variable (all tools that import resolve_game_version)
+set STS2_GAME_VERSION=2026.05.18
+python -m sts2_agent.main --policy ...
+```
+
+Human imports:
+
+```bash
+python tools/import_runs.py --game-version 2026.05.18
+```
+
+If unset, rows are tagged **`unknown`** (excluded when training with `--min-game-version`).
+
+Example `runs.jsonl` row:
 
 ```json
 {
@@ -98,11 +117,13 @@ If the scoring formula changes:
 }
 ```
 
-| Use | Why |
+| Use | How |
 |-----|-----|
-| Dashboard filters | Compare floor progress pre/post patch |
-| Training | `load_decision_rows(..., min_game_version=...)` excludes invalid eras |
-| Forensics | Know which checkpoint was trained on which patch |
+| Dashboard | Filter/compare by `game_version` column when present |
+| BC / PPO train | `--min-game-version 2026.05.18` on `training/train.py` and `training/train_ppo.py` |
+| Forensics | Match checkpoint config `min_game_version` / collection tag |
+
+Implementation: `sts2_agent/data_pipeline.py` (`set_game_version`, `resolve_game_version`), `training/dataset.py` (`game_version_ok`, `load_decision_rows`).
 
 **Critical patches:** drop or quarantine pre-patch rows when mechanics invalidate `state_snapshot` or actions (e.g. removed `state_type`, renamed actions).
 
@@ -180,4 +201,5 @@ Patches hurt most when knowledge, features, and data are **implicitly frozen**. 
 
 | Date | Note |
 |------|------|
-| 2026-05-18 | Initial patch management doc; `game_version` tagging documented as target schema |
+| 2026-05-18 | Initial patch management doc |
+| 2026-05-18 | `game_version` on runs/decisions; `--game-version` / `STS2_GAME_VERSION`; training `--min-game-version` |

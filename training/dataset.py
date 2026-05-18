@@ -25,11 +25,24 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
-def _load_runs_index(runs_path: Path) -> tuple[dict[str, float], dict[str, str]]:
+def game_version_ok(version: str | None, min_version: str | None) -> bool:
+    """Lexicographic compare (use YYYY.MM.DD-style ids). Legacy rows without a tag fail."""
+    if not min_version:
+        return True
+    v = str(version or "").strip()
+    if not v or v == "unknown":
+        return False
+    return v >= str(min_version).strip()
+
+
+def _load_runs_index(
+    runs_path: Path,
+) -> tuple[dict[str, float], dict[str, str], dict[str, str]]:
     scores: dict[str, float] = {}
     sources: dict[str, str] = {}
+    game_versions: dict[str, str] = {}
     if not runs_path.exists():
-        return scores, sources
+        return scores, sources, game_versions
     with runs_path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -49,17 +62,25 @@ def _load_runs_index(runs_path: Path) -> tuple[dict[str, float], dict[str, str]]
             source = row.get("source")
             if source is not None:
                 sources[rid] = str(source)
-    return scores, sources
+            gv = row.get("game_version")
+            if gv is not None:
+                game_versions[rid] = str(gv)
+    return scores, sources, game_versions
 
 
 def load_run_scores(runs_path: Path) -> dict[str, float]:
-    scores, _ = _load_runs_index(runs_path)
+    scores, _, _ = _load_runs_index(runs_path)
     return scores
 
 
 def load_run_sources(runs_path: Path) -> dict[str, str]:
-    _, sources = _load_runs_index(runs_path)
+    _, sources, _ = _load_runs_index(runs_path)
     return sources
+
+
+def load_run_game_versions(runs_path: Path) -> dict[str, str]:
+    _, _, versions = _load_runs_index(runs_path)
+    return versions
 
 
 def _run_score_for_row(row: dict, run_scores: dict[str, float]) -> float | None:
@@ -78,9 +99,12 @@ def load_decision_rows(
     runs_path: Path | None = None,
     min_run_score: float | None = None,
     min_run_score_percentile: float = 25.0,
+    min_game_version: str | None = None,
 ) -> tuple[list[dict], dict[str, float]]:
     """Load rows with valid actions; return (rows, run_id -> score)."""
-    run_scores = load_run_scores(runs_path or DEFAULT_RUNS_PATH)
+    runs_file = runs_path or DEFAULT_RUNS_PATH
+    run_scores = load_run_scores(runs_file)
+    run_game_versions = load_run_game_versions(runs_file)
 
     # Fill run scores from decision outcomes
     for line in decisions_path.open(encoding="utf-8"):
@@ -123,6 +147,12 @@ def load_decision_rows(
             if not rid:
                 continue
             if allowed_runs and rid not in allowed_runs:
+                continue
+            row_version = run_game_versions.get(rid) or row.get("game_version")
+            if not game_version_ok(
+                str(row_version) if row_version is not None else None,
+                min_game_version,
+            ):
                 continue
             if not row.get("action_taken"):
                 continue
@@ -255,6 +285,7 @@ def build_datasets(
     runs_path: Path | None = None,
     min_run_score: float | None = None,
     min_run_score_percentile: float = 25.0,
+    min_game_version: str | None = None,
     human_weight: float = 3.0,
     val_fraction: float = 0.2,
     seed: int = 42,
@@ -264,6 +295,7 @@ def build_datasets(
         runs_path=runs_path,
         min_run_score=min_run_score,
         min_run_score_percentile=min_run_score_percentile,
+        min_game_version=min_game_version,
     )
     if not rows:
         raise ValueError(f"No training rows after filtering: {decisions_path}")
@@ -300,6 +332,7 @@ def build_datasets(
         "human_weight": human_weight,
         "min_run_score_used": min_run_score,
         "min_run_score_percentile": min_run_score_percentile,
+        "min_game_version": min_game_version,
         "run_score_min": float(min(run_scores.values())) if run_scores else 0.0,
         "run_score_max": float(max(run_scores.values())) if run_scores else 0.0,
     }

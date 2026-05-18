@@ -289,6 +289,7 @@ def build_ppo_dataset(
     runs_path: Path | None = None,
     gamma: float = 0.99,
     min_run_score_percentile: float = 25.0,
+    min_game_version: str | None = None,
     val_fraction: float = 0.2,
     seed: int = 42,
     terminal_reward_scale: float = 1.0,
@@ -298,6 +299,7 @@ def build_ppo_dataset(
         decisions_path,
         runs_path=runs_path or DEFAULT_RUNS_PATH,
         min_run_score_percentile=min_run_score_percentile,
+        min_game_version=min_game_version,
     )
     if not rows:
         raise ValueError(f"No PPO rows after filtering: {decisions_path}")

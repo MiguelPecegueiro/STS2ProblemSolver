@@ -17,6 +17,7 @@ from sts2_agent.data_pipeline import (
     get_pipeline,
     observe_state,
     set_agent_version,
+    set_game_version,
 )
 from sts2_agent.decision_log import log_decision, setup_decision_logging
 from sts2_agent.knowledge import load_knowledge, refresh_cache
@@ -102,6 +103,15 @@ def parse_args() -> argparse.Namespace:
         "--data-dir",
         default=None,
         help="Directory for decisions.jsonl and runs.jsonl (default: data/ or data/instances/<id>)",
+    )
+    parser.add_argument(
+        "--game-version",
+        default=None,
+        metavar="ID",
+        help=(
+            "Balance patch tag for runs.jsonl / decisions.jsonl "
+            "(default: STS2_GAME_VERSION env or 'unknown')"
+        ),
     )
     parser.add_argument(
         "--interval",
@@ -398,6 +408,9 @@ def main() -> int:
     if args.data_dir is not None or args.instance_id is not None:
         out_dir = configure_data_paths(args.data_dir, args.instance_id)
         logging.info("Training data directory: %s", out_dir)
+
+    game_version = set_game_version(args.game_version)
+    logging.info("Game version tag: %s", game_version)
     if args.instance_id is not None and not args.no_compendium:
         args.no_compendium = True
         logging.info(
