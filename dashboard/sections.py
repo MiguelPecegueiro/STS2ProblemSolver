@@ -296,25 +296,28 @@ def section_combat_efficiency(
         st.caption(f"Agent version: **{agent_version}**")
     if not render_phase_b_note(phase_b_count, phase_b_total):
         return
-    block = m.block_efficiency(decisions)
+    mitigation = m.damage_mitigation_rate(decisions)
     potions = m.potion_hoard_death_rate(runs)
     energy = m.energy_waste_rate(decisions)
 
     c1, c2, c3 = st.columns(3)
-    if block is not None:
+    if mitigation is not None:
         c1.metric(
-            "Block efficiency",
-            f"{block:.1f}%",
-            help="% combat turns with block gain when enemy incoming intent > 0",
+            "Damage mitigation rate",
+            f"{mitigation:.1f}%",
+            help=(
+                "% of incoming attack damage absorbed by block (100% = fully blocked, "
+                "0% = no block at all). Measured at end of turn when damage resolves."
+            ),
         )
     else:
-        c1.caption("Block efficiency: no combat intent data")
+        c1.caption("Damage mitigation rate: no end_turn attack data")
 
     if potions is not None:
         c2.metric(
             "Potion hoarding at death",
             f"{potions:.1f}%",
-            help="% deaths with at least one empty potion slot",
+            help="% deaths with at least one empty potion slot (uses max_potion_slots on run)",
         )
     else:
         c2.caption("Potion metric: no deaths")

@@ -90,7 +90,10 @@ def score_run(run: dict, p: FormulaParams) -> float:
     deck = run.get("final_deck") or []
     deck_size = len(deck) if isinstance(deck, list) else 0
     potions = run.get("potions_at_death") or []
-    potion_count = len(potions) if isinstance(potions, list) else 0
+    if isinstance(potions, list):
+        potion_count = sum(1 for p in potions if p)
+    else:
+        potion_count = 0
     bosses_killed = int(run.get("bosses_killed") or 0)
     won = _run_won(run)
 

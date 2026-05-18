@@ -1011,11 +1011,36 @@ def combat_reward(hp_before: int, hp_after: int, max_hp: int, won_combat: bool) 
     return -50.0
 
 
+def damage_efficiency_penalty(combat_summary: object) -> float:
+    """Penalize low damage-per-turn across fights (Phase B combat_summary only).
+
+    Balanced play is ~10+ damage/turn; passive block-heavy runs sit at 5-8.
+    Threshold 10, multiplier -12: max penalty -120 at 0 dpt, zero at 10+ dpt.
+    """
+    if not isinstance(combat_summary, list) or not combat_summary:
+        return 0.0
+
+    total_turns = 0
+    total_damage = 0
+    for fight in combat_summary:
+        if not isinstance(fight, dict):
+            continue
+        total_turns += int(fight.get("turns") or 0)
+        total_damage += int(fight.get("damage_dealt") or 0)
+
+    if total_turns <= 0:
+        return 0.0
+
+    damage_per_turn = total_damage / total_turns
+    return max(0.0, 10.0 - damage_per_turn) * -12.0
+
+
 def run_score(run_data: dict[str, Any]) -> float:
     """Total run score from progression, HP conservation, and outcome.
 
     Weights tuned on human runs (tools/tune_run_score.py):
-    floors*15 + (act-1)*60 + avg_hp_pct*100 + win_bonus(1000) + bosses*100.
+    floors*15 + (act-1)*60 + avg_hp_pct*100 + win_bonus(1000) + bosses*100
+    + damage_efficiency_penalty (agent Phase B runs with combat_summary).
     """
     floors = int(run_data.get("floors_reached") or 0)
     act = int(run_data.get("act_reached") or 1)
@@ -1028,6 +1053,7 @@ def run_score(run_data: dict[str, Any]) -> float:
     hp_conservation_score = avg_hp_remaining * 100.0
     win_bonus = 1000.0 if won else 0.0
     boss_bonus = bosses_killed * 100.0
+    dmg_penalty = damage_efficiency_penalty(run_data.get("combat_summary"))
 
     total = (
         floor_score
@@ -1035,6 +1061,7 @@ def run_score(run_data: dict[str, Any]) -> float:
         + hp_conservation_score
         + win_bonus
         + boss_bonus
+        + dmg_penalty
     )
     return max(0.0, float(total))
 

@@ -106,6 +106,22 @@ def test_killing_enemy_on_combat_death():
     assert killer["compendium_key"] == "jaw_worm"
 
 
+def test_extract_potion_belt_at_death_sparse_slots():
+    from sts2_agent.data_pipeline import extract_potion_belt_at_death
+
+    state = {
+        "player": {
+            "max_potion_slots": 3,
+            "potions": [{"name": "Fire Potion"}, False, {"id": "BLOCK_POTION"}],
+        }
+    }
+    max_slots, slots = extract_potion_belt_at_death(state)
+    assert max_slots == 3
+    assert slots[0] == "Fire Potion"
+    assert slots[1] is None
+    assert slots[2] == "BLOCK_POTION"
+
+
 def test_record_decision_includes_card_reward_offered():
     pipe = DataPipeline()
     pipe._run_active = True

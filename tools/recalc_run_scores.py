@@ -43,6 +43,7 @@ def _run_data_from_row(row: dict) -> dict:
         "avg_hp_pct_after_combat": row.get("avg_hp_pct_after_combat"),
         "bosses_killed": row.get("bosses_killed"),
         "won": _run_won(row),
+        "combat_summary": row.get("combat_summary"),
     }
 
 

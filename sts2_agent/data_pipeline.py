@@ -150,20 +150,34 @@ def extract_deck_card_ids(state: dict) -> list[str]:
     return ordered
 
 
-def extract_potion_ids(state: dict) -> list[str]:
-    """Potion IDs/names from player belt."""
+def _potion_entry_id(potion: object) -> str | None:
+    if isinstance(potion, dict):
+        pid = str(potion.get("id") or potion.get("name") or "").strip()
+    else:
+        pid = str(potion).strip()
+    return pid or None
+
+
+def extract_potion_belt_at_death(state: dict) -> tuple[int, list[str | None]]:
+    """
+    Full potion belt at run end: max_potion_slots + one entry per slot (None if empty).
+    Uses iter_potion_belt_slots() for occupied slots; empty slots stay None.
+    """
+    from sts2_agent.potions import iter_potion_belt_slots
+
     player = state.get("player") or {}
-    potions: list[str] = []
-    for potion in player.get("potions") or []:
-        if not potion or potion is False:
-            continue
-        if isinstance(potion, dict):
-            pid = str(potion.get("id") or potion.get("name") or "")
-        else:
-            pid = str(potion)
-        if pid:
-            potions.append(pid)
-    return potions
+    max_slots = int(player.get("max_potion_slots") or 3)
+    slots: list[str | None] = [None] * max_slots
+    for belt_slot, potion in iter_potion_belt_slots(player):
+        if 0 <= belt_slot < max_slots:
+            slots[belt_slot] = _potion_entry_id(potion)
+    return max_slots, slots
+
+
+def extract_potion_ids(state: dict) -> list[str]:
+    """Filled potion IDs/names only (legacy helper)."""
+    _, slots = extract_potion_belt_at_death(state)
+    return [p for p in slots if p]
 
 
 def extract_relic_ids(state: dict) -> list[str]:
@@ -972,7 +986,10 @@ class DataPipeline:
         if not relics and state:
             relics = extract_relic_ids(state)
 
-        potions_at_death = extract_potion_ids(state) if state else []
+        if state:
+            max_potion_slots, potions_at_death = extract_potion_belt_at_death(state)
+        else:
+            max_potion_slots, potions_at_death = 0, []
 
         avg_hp_pct, best_hp_pct, worst_hp_pct = self._combat_hp_percentages()
 
@@ -981,9 +998,11 @@ class DataPipeline:
             "act_reached": self._max_act_seen,
             "avg_hp_pct_after_combat": avg_hp_pct,
             "final_deck": deck,
+            "max_potion_slots": max_potion_slots,
             "potions_at_death": potions_at_death,
             "bosses_killed": self._bosses_killed,
             "won": won,
+            "combat_summary": list(self._combat_summaries),
         }
         run_score_val = run_score(run_data)
 
@@ -1020,6 +1039,7 @@ class DataPipeline:
             "best_combat_hp_pct": best_hp_pct,
             "worst_combat_hp_pct": worst_hp_pct,
             "bosses_killed": self._bosses_killed,
+            "max_potion_slots": max_potion_slots,
             "potions_at_death": potions_at_death,
             "hp_before_each_combat": list(self._hp_before_each_combat),
             "hp_after_each_combat": list(self._hp_after_each_combat),

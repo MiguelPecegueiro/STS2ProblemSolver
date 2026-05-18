@@ -421,6 +421,37 @@ def human_benchmark_damage(runs: pd.DataFrame) -> float | None:
     return float(human["total_damage_taken"].mean())
 
 
+def normalize_card_name(name: str | None) -> str | None:
+    """
+    Canonical card key for matching agent vs human (UPPER_UNDERSCORE).
+    Accepts display names, ids, or CARD.* prefixes.
+    """
+    if name is None:
+        return None
+    text = str(name).strip()
+    if not text or text.lower().startswith("reward slot"):
+        return None
+    if text.upper().startswith("CARD."):
+        text = text.split(".", 1)[-1].strip()
+    key = text.upper().replace(" ", "_").replace("-", "_")
+    key = re.sub(r"_+", "_", key).strip("_")
+    return key or None
+
+
+def format_card_label(canonical: str) -> str:
+    """Readable label for dashboard tables."""
+    return str(canonical).replace("_", " ").title()
+
+
+def normalize_pick_list(picks: list[str]) -> list[str]:
+    out: list[str] = []
+    for pick in picks:
+        key = normalize_card_name(pick)
+        if key:
+            out.append(key)
+    return out
+
+
 def _card_index_from_row(row: pd.Series) -> int | None:
     idx = row.get("card_index")
     if pd.notna(idx):
@@ -475,19 +506,20 @@ def agent_reward_picks(decisions: pd.DataFrame) -> list[str]:
     mask = (decisions["state_type"] == "card_reward") & (
         decisions["action"].isin(["select_card_reward", "select_card"])
     )
-    return (
+    raw = (
         decisions.loc[mask]
         .apply(extract_card_pick_name, axis=1)
         .dropna()
         .astype(str)
         .tolist()
     )
+    return normalize_pick_list(raw)
 
 
 def human_reward_picks(card_choices: pd.DataFrame) -> list[str]:
     if card_choices.empty or "picked" not in card_choices.columns:
         return []
-    return card_choices["picked"].dropna().astype(str).tolist()
+    return normalize_pick_list(card_choices["picked"].dropna().astype(str).tolist())
 
 
 def pick_rate_table(
@@ -496,8 +528,8 @@ def pick_rate_table(
     *,
     top_n: int = 12,
 ) -> pd.DataFrame:
-    ac = Counter(agent_picks)
-    hc = Counter(human_picks)
+    ac = Counter(normalize_pick_list(agent_picks))
+    hc = Counter(normalize_pick_list(human_picks))
     cards = {c for c, _ in ac.most_common(top_n)} | {c for c, _ in hc.most_common(top_n)}
     if not cards:
         return pd.DataFrame()
@@ -507,7 +539,7 @@ def pick_rate_table(
     for card in sorted(cards, key=lambda c: ac.get(c, 0) + hc.get(c, 0), reverse=True):
         rows.append(
             {
-                "Card": card,
+                "Card": format_card_label(card),
                 "Agent picks": ac.get(card, 0),
                 "Agent %": f"{100 * ac.get(card, 0) / a_total:.1f}",
                 "Human picks": hc.get(card, 0),
@@ -532,9 +564,7 @@ def card_tier(name: str) -> str | None:
 
 def picked_card_tier_counts(pick_names: list[str]) -> pd.DataFrame:
     counts: Counter[str] = Counter()
-    for name in pick_names:
-        if name.startswith("reward slot"):
-            continue
+    for name in normalize_pick_list(pick_names):
         tier = card_tier(name) or "?"
         counts[tier] += 1
     if not counts:
@@ -552,15 +582,21 @@ def human_tier_miss_rate(card_choices: pd.DataFrame) -> float | None:
     total = 0
     for _, row in card_choices.iterrows():
         offered = row.get("offered") or []
-        picked = row.get("picked")
+        picked = normalize_card_name(row.get("picked"))
         if not isinstance(offered, list) or not picked:
             continue
-        tiers = [tier_rank(card_tier(str(c))) for c in offered if c]
-        tiers = [t for t in tiers if t >= 0]
+        tiers = []
+        for card in offered:
+            key = normalize_card_name(str(card))
+            if not key:
+                continue
+            tr = tier_rank(card_tier(key))
+            if tr >= 0:
+                tiers.append(tr)
         if not tiers:
             continue
         best = max(tiers)
-        picked_t = tier_rank(card_tier(str(picked)))
+        picked_t = tier_rank(card_tier(picked))
         if picked_t < 0:
             continue
         total += 1
@@ -579,7 +615,10 @@ def deck_card_win_loss(runs: pd.DataFrame, *, top_n: int = 12) -> pd.DataFrame:
         c: Counter = Counter()
         for deck in sub.get("final_deck", []):
             if isinstance(deck, list):
-                c.update(deck)
+                for card in deck:
+                    key = normalize_card_name(str(card))
+                    if key:
+                        c[key] += 1
         return c
 
     wc, lc = count_decks(wins), count_decks(losses)
@@ -588,7 +627,7 @@ def deck_card_win_loss(runs: pd.DataFrame, *, top_n: int = 12) -> pd.DataFrame:
     for card in sorted(cards, key=lambda c: wc.get(c, 0) + lc.get(c, 0), reverse=True):
         rows.append(
             {
-                "Card": card,
+                "Card": format_card_label(card),
                 "In wins": wc.get(card, 0),
                 "In losses": lc.get(card, 0),
             }
@@ -596,49 +635,121 @@ def deck_card_win_loss(runs: pd.DataFrame, *, top_n: int = 12) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def block_efficiency(decisions: pd.DataFrame) -> float | None:
-    """% combat decisions with block gain when incoming intent damage > 0."""
+def parse_intent_damage_value(value: object) -> int:
+    """Parse enemy intent damage: int, numeric string, or multi-hit 'NxM' (e.g. 4x2 -> 8)."""
+    if value is None:
+        return 0
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, (int, float)):
+        return max(0, int(value))
+
+    text = str(value).strip().lower()
+    if not text:
+        return 0
+
+    match = re.match(r"^(\d+)\s*x\s*(\d+)$", text)
+    if match:
+        return int(match.group(1)) * int(match.group(2))
+
+    try:
+        return max(0, int(float(text)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _hp_lost_from_row(row: pd.Series) -> int:
+    val = row.get("hp_lost_this_turn")
+    if pd.notna(val):
+        try:
+            return max(0, int(val))
+        except (TypeError, ValueError):
+            pass
+    reward = row.get("immediate_reward")
+    if isinstance(reward, dict):
+        try:
+            return max(0, int(reward.get("hp_lost_this_turn") or 0))
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
+def damage_mitigation_rate(decisions: pd.DataFrame) -> float | None:
+    """
+    Of incoming attack damage at end_turn, what % was absorbed by block?
+    Per decision: min(1, max(0, incoming - hp_lost) / incoming); averaged * 100.
+    """
     if decisions.empty or "incoming_damage" not in decisions.columns:
         return None
-    combat = decisions[decisions["state_type"].isin(COMBAT_TYPES)].copy()
-    if combat.empty:
+    if "action" not in decisions.columns:
         return None
 
-    incoming_mask = combat["incoming_damage"].fillna(0) > 0
-    eligible = int(incoming_mask.sum())
-    if eligible == 0:
+    ends = decisions[decisions["action"] == "end_turn"]
+    if ends.empty:
         return None
 
-    if "block_applied" in combat.columns:
-        with_block = int((combat.loc[incoming_mask, "block_applied"].fillna(0) > 0).sum())
+    mitigations: list[float] = []
+    for _, row in ends.iterrows():
+        try:
+            incoming = int(row.get("incoming_damage") or 0)
+        except (TypeError, ValueError):
+            continue
+        if incoming <= 0:
+            continue
+        hp_lost = _hp_lost_from_row(row)
+        damage_mitigated = max(0, incoming - hp_lost)
+        mitigations.append(min(1.0, damage_mitigated / incoming))
+
+    if not mitigations:
+        return None
+    return 100.0 * sum(mitigations) / len(mitigations)
+
+
+def _potion_belt_filled_count(row: pd.Series, *, default_max_slots: int = 3) -> tuple[int, int] | None:
+    """
+    Return (max_slots, filled_count) for a run row.
+    New logs: len(potions_at_death) == max_potion_slots with None for empty slots.
+    Legacy logs: filled-only list + optional max_potion_slots.
+    """
+    belt = row.get("potions_at_death")
+    if not isinstance(belt, list):
+        return None
+
+    max_slots = row.get("max_potion_slots")
+    if pd.notna(max_slots) and int(max_slots) > 0:
+        cap = int(max_slots)
     else:
-        with_block = 0
-        for _, row in combat[incoming_mask].iterrows():
-            reward = row.get("immediate_reward")
-            block = 0
-            if isinstance(reward, dict):
-                block = int(reward.get("block_applied") or 0)
-            if block > 0:
-                with_block += 1
+        cap = default_max_slots
 
-    return 100.0 * with_block / eligible
+    if len(belt) == cap:
+        filled = sum(1 for p in belt if p)
+        return cap, filled
+
+    filled = sum(1 for p in belt if p)
+    return cap, filled
 
 
-def potion_hoard_death_rate(runs: pd.DataFrame, *, max_slots: int = 3) -> float | None:
+def potion_hoard_death_rate(runs: pd.DataFrame, *, default_max_slots: int = 3) -> float | None:
     """% of deaths with at least one empty potion slot (unused capacity)."""
     agent = agent_runs_only(runs)
     deaths = agent[agent["won"] == False]  # noqa: E712
     if deaths.empty:
         return None
     hoard = 0
+    counted = 0
     for _, row in deaths.iterrows():
-        potions = row.get("potions_at_death") or []
-        if not isinstance(potions, list):
+        parsed = _potion_belt_filled_count(row, default_max_slots=default_max_slots)
+        if parsed is None:
             continue
-        filled = len([p for p in potions if p])
+        max_slots, filled = parsed
+        if max_slots <= 0:
+            continue
+        counted += 1
         if filled < max_slots:
             hoard += 1
-    return 100.0 * hoard / len(deaths)
+    if counted == 0:
+        return None
+    return 100.0 * hoard / counted
 
 
 def energy_waste_rate(decisions: pd.DataFrame) -> float | None:
@@ -682,13 +793,7 @@ def incoming_damage_from_snapshot(snap: dict) -> int:
     for enemy in snap.get("enemies") or []:
         if not isinstance(enemy, dict):
             continue
-        val = enemy.get("intent_value")
-        if val is None:
-            continue
-        try:
-            total += int(val)
-        except (TypeError, ValueError):
-            continue
+        total += parse_intent_damage_value(enemy.get("intent_value"))
     return total
 
 

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from dashboard.metrics import (
+    damage_mitigation_rate,
     early_version_warnings,
     human_tier_miss_rate,
     incoming_damage_from_snapshot,
     parse_death_enemy,
+    parse_intent_damage_value,
     pick_rate_table,
     potion_hoard_death_rate,
     tier_rank,
@@ -20,15 +23,23 @@ def test_parse_death_enemy():
     assert parse_death_enemy(cause) == "Jaw Worm"
 
 
+def test_parse_intent_damage_value():
+    assert parse_intent_damage_value(12) == 12
+    assert parse_intent_damage_value("4x2") == 8
+    assert parse_intent_damage_value("6X2") == 12
+    assert parse_intent_damage_value("") == 0
+    assert parse_intent_damage_value("4x4") == 16
+
+
 def test_incoming_damage_from_snapshot():
     snap = {
         "enemies": [
             {"intent_value": 12},
-            {"intent_value": 5},
+            {"intent_value": "4x2"},
             {"intent_value": None},
         ]
     }
-    assert incoming_damage_from_snapshot(snap) == 17
+    assert incoming_damage_from_snapshot(snap) == 20
 
 
 def test_early_warning_flags_underperformance():
@@ -70,8 +81,26 @@ def test_extract_card_pick_name_resolves_offered():
     assert extract_card_pick_name(row) == "Bash"
 
 
+def test_normalize_card_name_matches_formats():
+    from dashboard.metrics import normalize_card_name, normalize_pick_list, pick_rate_table
+
+    assert normalize_card_name("Pommel Strike") == "POMMEL_STRIKE"
+    assert normalize_card_name("POMMEL_STRIKE") == "POMMEL_STRIKE"
+    assert normalize_card_name("pommel strike") == "POMMEL_STRIKE"
+    assert normalize_card_name("reward slot 2") is None
+
+    agent = normalize_pick_list(["Pommel Strike", "POMMEL_STRIKE"])
+    assert agent == ["POMMEL_STRIKE", "POMMEL_STRIKE"]
+
+    table = pick_rate_table(["Pommel Strike", "Pommel Strike"], ["POMMEL_STRIKE"])
+    assert not table.empty
+    assert len(table) == 1
+    assert table.iloc[0]["Agent picks"] == 2
+    assert table.iloc[0]["Human picks"] == 1
+
+
 def test_pick_rate_table():
-    table = pick_rate_table(["A", "A", "B"], ["A", "C"])
+    table = pick_rate_table(["STRIKE", "STRIKE", "DEFEND"], ["STRIKE", "BASH"])
     assert not table.empty
     assert "Agent picks" in table.columns
 
@@ -161,37 +190,36 @@ def test_filter_detail_phase_b():
     assert len(out_dec) == 1
 
 
-def test_block_efficiency_uses_flattened_block_applied():
-    import pandas as pd
-
-    from dashboard.metrics import block_efficiency
-
+def test_damage_mitigation_rate():
     decisions = pd.DataFrame(
         [
             {
-                "state_type": "monster",
-                "incoming_damage": 10,
-                "block_applied": 5,
-                "immediate_reward": None,
+                "action": "play_card",
+                "incoming_damage": 13,
+                "hp_lost_this_turn": 0,
             },
             {
-                "state_type": "monster",
-                "incoming_damage": 8,
-                "block_applied": 0,
-                "immediate_reward": None,
+                "action": "end_turn",
+                "incoming_damage": 13,
+                "hp_lost_this_turn": 0,
             },
             {
-                "state_type": "monster",
-                "incoming_damage": 0,
-                "block_applied": 9,
-                "immediate_reward": None,
+                "action": "end_turn",
+                "incoming_damage": 13,
+                "hp_lost_this_turn": 3,
+            },
+            {
+                "action": "end_turn",
+                "incoming_damage": 13,
+                "hp_lost_this_turn": 13,
             },
         ]
     )
-    assert block_efficiency(decisions) == 50.0
+    # Only end_turn rows: 100%, ~76.9%, 0% -> avg ~58.97%
+    assert damage_mitigation_rate(decisions) == pytest.approx(100 * (1 + 10 / 13 + 0) / 3)
 
 
-def test_potion_hoard():
+def test_potion_hoard_legacy_filled_only_list():
     runs = pd.DataFrame(
         {
             "source": ["agent", "agent"],
@@ -199,5 +227,35 @@ def test_potion_hoard():
             "potions_at_death": [["p1"], []],
         }
     )
-    rate = potion_hoard_death_rate(runs, max_slots=2)
+    rate = potion_hoard_death_rate(runs, default_max_slots=2)
+    assert rate == 100.0
+
+
+def test_potion_hoard_slot_aware_belt():
+    runs = pd.DataFrame(
+        {
+            "source": ["agent", "agent", "agent"],
+            "won": [False, False, False],
+            "max_potion_slots": [3, 3, 3],
+            "potions_at_death": [
+                ["p1", None, "p3"],
+                [None, None, None],
+                ["a", "b", "c"],
+            ],
+        }
+    )
+    rate = potion_hoard_death_rate(runs)
+    assert rate == pytest.approx(100.0 * 2 / 3)  # 2 hoard of 3
+
+
+def test_potion_hoard():
+    runs = pd.DataFrame(
+        {
+            "source": ["agent", "agent"],
+            "won": [False, False],
+            "max_potion_slots": [2, 2],
+            "potions_at_death": [["p1", None], [None, None]],
+        }
+    )
+    rate = potion_hoard_death_rate(runs)
     assert rate == 100.0
