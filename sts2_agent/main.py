@@ -6,10 +6,17 @@ import argparse
 import logging
 import sys
 import time
+from pathlib import Path
 
 import requests
 
-from sts2_agent.agent import configure_policy, decide, state_fingerprint
+from sts2_agent.agent import (
+    configure_card_reward_bc,
+    configure_policy,
+    configure_ppo_macro,
+    decide,
+    state_fingerprint,
+)
 from sts2_agent.api import DEFAULT_BASE_URL, STS2APIError, STS2Client
 from sts2_agent import combat, event, map as map_handler, rewards, rest, shop
 from sts2_agent.data_pipeline import (
@@ -21,8 +28,10 @@ from sts2_agent.data_pipeline import (
 )
 from sts2_agent.decision_log import log_decision, setup_decision_logging
 from sts2_agent.knowledge import load_knowledge, refresh_cache
+from sts2_agent.qwen_advisor import configure_qwen, get_qwen_advisor
 from sts2_agent.graceful_shutdown import (
     GracefulShutdown,
+    SingleRunController,
     install_graceful_shutdown_handler,
     shutdown_help_message,
 )
@@ -33,12 +42,30 @@ from sts2_agent.state_parse import (
     treasure_can_proceed,
 )
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CARD_REWARD_MODEL = REPO_ROOT / "models" / "bc_human_card.pt"
+DEFAULT_CARD_REWARD_CONFIG = REPO_ROOT / "models" / "bc_human_card_config.json"
+DEFAULT_PPO_MACRO_MODEL = REPO_ROOT / "models" / "ppo_v5.pt"
+DEFAULT_PPO_MACRO_CONFIG = REPO_ROOT / "models" / "ppo_config.json"
+
 POLL_INTERVAL_SEC = 0.5
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(message)s"
 
 # Logged on each run/decision row - bump when rules or model checkpoint changes.
 AGENT_VERSION_RULES = "rules_v1"
-AGENT_VERSION = "ppo_v5"
+AGENT_VERSION = "ppo_v6"
+
+# Qwen (LM Studio) — runtime only; fails open if API unavailable.
+QWEN_ENABLED = True
+QWEN_COMBAT_ENABLED = False
+QWEN_MACRO_ENABLED = False
+QWEN_MACRO_CONTEXT_ENABLED = True
+CARD_REWARD_BC_ENABLED = True
+PPO_MACRO_ENABLED = True
+QWEN_URL = "http://127.0.0.1:1234/v1/chat/completions"
+QWEN_MODEL = "qwen3-4b-instruct-2507"
+QWEN_TIMEOUT = 10
+QWEN_LOG_FULL_PROMPT = True
 
 
 def _record_training_data(state: dict, action: dict, reasons: list[str]) -> None:
@@ -159,6 +186,43 @@ def parse_args() -> argparse.Namespace:
             "rules elsewhere. Ignored if --policy is set"
         ),
     )
+    parser.add_argument(
+        "--combat-policy",
+        action="store_true",
+        help=(
+            "With --policy: policy-first in combat (legacy). Default is planner-first; "
+            "policy only when the combat planner abstains."
+        ),
+    )
+    parser.add_argument(
+        "--card-reward-model",
+        type=Path,
+        default=DEFAULT_CARD_REWARD_MODEL,
+        help="Human BC checkpoint for card_reward screens (default: models/bc_human_card.pt)",
+    )
+    parser.add_argument(
+        "--card-reward-config",
+        type=Path,
+        default=DEFAULT_CARD_REWARD_CONFIG,
+        help="Config for --card-reward-model (default: models/bc_human_card_config.json)",
+    )
+    parser.add_argument(
+        "--ppo-model",
+        type=Path,
+        default=DEFAULT_PPO_MACRO_MODEL,
+        help="PPO checkpoint for map/shop/rest/event (default: models/ppo_v5.pt)",
+    )
+    parser.add_argument(
+        "--ppo-config",
+        type=Path,
+        default=DEFAULT_PPO_MACRO_CONFIG,
+        help="Config for --ppo-model (default: models/ppo_config.json)",
+    )
+    parser.add_argument(
+        "--single-run",
+        action="store_true",
+        help="Play one full run then exit (no continuous collection loop)",
+    )
     return parser.parse_args()
 
 
@@ -167,11 +231,16 @@ def run(
     interval: float,
     menu_flow: MenuFlow,
     graceful: GracefulShutdown,
+    *,
+    single_run: bool = False,
 ) -> None:
     last_fingerprint: str | None = None
     last_action_key: str | None = None
     last_potion_action: tuple[object, ...] | None = None
+    single = SingleRunController() if single_run else None
 
+    if single_run:
+        logging.info("Single-run mode: will exit after one completed run")
     logging.info("Autonomous loop active - %s", shutdown_help_message())
 
     while True:
@@ -430,6 +499,17 @@ def main() -> int:
         if args.refresh_knowledge:
             refresh_cache(force=True)
         load_knowledge(force_refresh=args.refresh_knowledge)
+        configure_qwen(
+            enabled=QWEN_ENABLED,
+            combat_enabled=QWEN_COMBAT_ENABLED,
+            macro_enabled=QWEN_MACRO_ENABLED,
+            macro_context_enabled=QWEN_MACRO_CONTEXT_ENABLED,
+            url=QWEN_URL,
+            model=QWEN_MODEL,
+            timeout=float(QWEN_TIMEOUT),
+            log_full_prompt=QWEN_LOG_FULL_PROMPT,
+        )
+        get_qwen_advisor().reload_expert_knowledge()
         logging.info("Knowledge base ready")
     except requests.RequestException as exc:
         logging.error(
@@ -456,11 +536,86 @@ def main() -> int:
             "Enemy compendium: observation/logging only (combat uses live API intents)"
         )
 
+    card_bc_on = False
+    if CARD_REWARD_BC_ENABLED:
+        if args.card_reward_model.exists() and args.card_reward_config.exists():
+            configure_card_reward_bc(
+                enabled=True,
+                model_path=args.card_reward_model,
+                config_path=args.card_reward_config,
+            )
+            try:
+                from training.card_reward_bc import get_card_reward_policy
+
+                get_card_reward_policy(
+                    args.card_reward_model,
+                    args.card_reward_config,
+                )
+                card_bc_on = True
+                logging.info(
+                    "Card reward BC: %s (Qwen skipped on card_reward)",
+                    args.card_reward_model,
+                )
+            except Exception as exc:
+                logging.error("Failed to load card reward BC model: %s", exc)
+                configure_card_reward_bc(enabled=False)
+                return 1
+        else:
+            logging.warning(
+                "Card reward BC enabled but checkpoint missing (%s / %s) - using rules/Qwen",
+                args.card_reward_model,
+                args.card_reward_config,
+            )
+            configure_card_reward_bc(enabled=False)
+    else:
+        configure_card_reward_bc(enabled=False)
+
+    ppo_macro_on = False
+    if PPO_MACRO_ENABLED:
+        from training.ppo_macro import resolve_ppo_macro_paths
+
+        model_arg = args.ppo_model if args.ppo_model.exists() else None
+        cfg_arg = args.ppo_config if args.ppo_config.exists() else None
+        ppo_model, ppo_cfg = resolve_ppo_macro_paths(model_arg, cfg_arg)
+        if ppo_model.exists() and ppo_cfg.exists():
+            configure_ppo_macro(
+                enabled=True,
+                model_path=ppo_model,
+                config_path=ppo_cfg,
+            )
+            try:
+                from training.ppo_macro import get_ppo_macro_policy
+
+                get_ppo_macro_policy(ppo_model, ppo_cfg)
+                ppo_macro_on = True
+                logging.info(
+                    "PPO macro: %s for map/shop/rest/event (Qwen context=%s)",
+                    ppo_model,
+                    QWEN_MACRO_CONTEXT_ENABLED,
+                )
+            except Exception as exc:
+                logging.error("Failed to load PPO macro model: %s", exc)
+                configure_ppo_macro(enabled=False)
+                return 1
+        else:
+            logging.warning(
+                "PPO macro enabled but checkpoint missing (%s) - rules for macro screens",
+                args.ppo_model,
+            )
+            configure_ppo_macro(enabled=False)
+    else:
+        configure_ppo_macro(enabled=False)
+
     use_policy = args.policy or args.policy_combat_only
-    set_agent_version(AGENT_VERSION if use_policy else AGENT_VERSION_RULES)
+    use_neural = use_policy or card_bc_on or ppo_macro_on
+    set_agent_version(AGENT_VERSION if use_neural else AGENT_VERSION_RULES)
 
     if use_policy:
-        configure_policy(enabled=args.policy, combat_only=args.policy_combat_only)
+        configure_policy(
+            enabled=args.policy,
+            combat_only=args.policy_combat_only,
+            no_combat_policy=not args.combat_policy,
+        )
         try:
             from training.inference import get_policy
 
@@ -468,26 +623,36 @@ def main() -> int:
         except Exception as exc:
             logging.error("Failed to load policy model: %s", exc)
             return 1
+        combat_routing = (
+            "planner first, policy on abstain"
+            if not args.combat_policy
+            else "policy first, rules fallback"
+        )
         if args.policy:
             logging.info(
-                "Policy mode: BC model for all screens (rules fallback on invalid actions)"
+                "Policy mode: model for non-combat screens; combat=%s",
+                combat_routing,
             )
         else:
             logging.info(
-                "Policy mode: BC model in combat only (rules fallback on invalid actions)"
+                "Policy mode: combat only (%s); rules elsewhere",
+                combat_routing,
             )
 
-    active_version = AGENT_VERSION if use_policy else AGENT_VERSION_RULES
+    active_version = AGENT_VERSION if use_neural else AGENT_VERSION_RULES
     logging.info(
-        "STS2 agent started (url=%s, poll every %.2fs, character=%s, agent_version=%s)",
+        "STS2 agent started (url=%s, poll every %.2fs, character=%s, agent_version=%s, "
+        "card_bc=%s, ppo_macro=%s)",
         client.base_url,
         args.interval,
         args.character,
         active_version,
+        card_bc_on,
+        ppo_macro_on,
     )
     get_pipeline()
     try:
-        run(client, args.interval, menu_flow, graceful)
+        run(client, args.interval, menu_flow, graceful, single_run=args.single_run)
         get_pipeline().flush_on_exit()
         return 0
     except KeyboardInterrupt:

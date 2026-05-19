@@ -12,3 +12,8 @@ def test_combat_turn_shaping_aggressive_trade():
 
 def test_combat_turn_shaping_block_and_damage():
     assert combat_turn_shaping(0, 5, 8) == pytest.approx(9.5)
+
+
+def test_combat_turn_shaping_dynamic_multipliers():
+    # aggressive: more damage reward, less HP penalty
+    assert combat_turn_shaping(4, 0, 10, damage_mult=2.0, hp_loss_mult=0.25) == pytest.approx(19.0)

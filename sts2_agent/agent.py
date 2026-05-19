@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
 from sts2_agent import card_select, combat, event, map as map_handler, rewards, rest, shop
 from sts2_agent.action_validate import normalize_policy_action, validate_policy_action
@@ -22,6 +23,9 @@ from sts2_agent.state_parse import (
     is_card_select_active,
 )
 from sts2_agent.agent_types import Decision
+from sts2_agent.qwen_advisor import is_qwen_macro_context_enabled
+from sts2_agent.qwen_macro import fetch_macro_qwen_context
+from training.ppo_macro import ppo_macro_state_types
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +33,63 @@ COMBAT_TYPES = combat.COMBAT_STATE_TYPES | {"hand_select"}
 
 _policy_enabled = False
 _policy_combat_only = False
+_no_combat_policy = True
+
+_card_reward_bc_enabled = False
+_card_reward_model_path: Path | None = None
+_card_reward_config_path: Path | None = None
+
+_ppo_macro_enabled = False
+_ppo_macro_model_path: Path | None = None
+_ppo_macro_config_path: Path | None = None
 
 
-def configure_policy(*, enabled: bool = False, combat_only: bool = False) -> None:
-    global _policy_enabled, _policy_combat_only
+def configure_card_reward_bc(
+    *,
+    enabled: bool = False,
+    model_path: Path | str | None = None,
+    config_path: Path | str | None = None,
+) -> None:
+    global _card_reward_bc_enabled, _card_reward_model_path, _card_reward_config_path
+    from pathlib import Path as _Path
+
+    _card_reward_bc_enabled = enabled
+    _card_reward_model_path = _Path(model_path) if model_path is not None else None
+    _card_reward_config_path = _Path(config_path) if config_path is not None else None
+
+
+def card_reward_bc_enabled() -> bool:
+    return _card_reward_bc_enabled
+
+
+def configure_ppo_macro(
+    *,
+    enabled: bool = False,
+    model_path: Path | str | None = None,
+    config_path: Path | str | None = None,
+) -> None:
+    global _ppo_macro_enabled, _ppo_macro_model_path, _ppo_macro_config_path
+    from pathlib import Path as _Path
+
+    _ppo_macro_enabled = enabled
+    _ppo_macro_model_path = _Path(model_path) if model_path is not None else None
+    _ppo_macro_config_path = _Path(config_path) if config_path is not None else None
+
+
+def ppo_macro_enabled() -> bool:
+    return _ppo_macro_enabled
+
+
+def configure_policy(
+    *,
+    enabled: bool = False,
+    combat_only: bool = False,
+    no_combat_policy: bool = True,
+) -> None:
+    global _policy_enabled, _policy_combat_only, _no_combat_policy
     _policy_enabled = enabled
     _policy_combat_only = combat_only and not enabled
+    _no_combat_policy = no_combat_policy
 
 
 def policy_active_for_state(state_type: str) -> bool:
@@ -95,6 +150,198 @@ def _decide_rules(state: dict) -> Decision:
     return Decision(None, [f"unhandled state_type: {state_type}"])
 
 
+def _planner_mode_from_reasons(reasons: list[str]) -> str:
+    """Infer lethal / aggressive / trade from combat.decide_combat reason text."""
+    text = " ".join(str(r) for r in reasons).lower()
+    if "lethal" in text:
+        return "lethal"
+    if (
+        "needs_block_first=true" in text
+        or "block first" in text
+        or ("debuff pressure" in text and "prioritize block" in text)
+        or "play power (safe turn)" in text
+    ):
+        return "trade"
+    return "aggressive"
+
+
+def _decide_combat_planner_first(
+    state: dict,
+    state_type: str,
+    pot_reasons: list[str],
+) -> Decision:
+    """Combat planner primary; policy only when planner abstains (returns None)."""
+    action, reasons = combat.decide_combat(state)
+    if action is not None:
+        mode = _planner_mode_from_reasons(reasons)
+        tag = f"planner: {mode}"
+        logger.info(tag)
+        return Decision(action, pot_reasons + [tag] + reasons)
+
+    logger.info("planner abstained → policy fallback")
+    prefix = ["planner abstained → policy fallback"] + list(reasons)
+
+    policy_decision = _decide_policy(state, state_type)
+    if policy_decision is not None and policy_decision.action is not None:
+        return Decision(policy_decision.action, prefix + policy_decision.reasons)
+
+    if policy_decision is not None and policy_decision.reasons:
+        prefix.extend(policy_decision.reasons)
+    return Decision(None, prefix)
+
+
+def _decide_combat(state: dict, state_type: str) -> Decision:
+    """Combat solver (planner); optional legacy --policy paths when enabled."""
+    pot_reasons: list[str] = []
+    if state_type in combat.COMBAT_STATE_TYPES:
+        pot_action, pot_reasons = combat.decide_combat_potion(state)
+        if pot_action:
+            return Decision(
+                pot_action,
+                ["potion priority (before planner)"] + pot_reasons,
+            )
+
+        if (_policy_enabled or _policy_combat_only) and policy_active_for_state(state_type):
+            combat_planner_first = (
+                _no_combat_policy and state_type in combat.COMBAT_STATE_TYPES
+            )
+            if combat_planner_first:
+                return _decide_combat_planner_first(state, state_type, pot_reasons)
+
+            policy_decision = _decide_policy(state, state_type)
+            if policy_decision is not None and policy_decision.action is not None:
+                return Decision(
+                    policy_decision.action,
+                    ["combat policy-first"] + pot_reasons + policy_decision.reasons,
+                )
+            fallback_reason = ["combat policy invalid → planner"]
+            if policy_decision is not None and policy_decision.reasons:
+                fallback_reason.extend(policy_decision.reasons)
+            action, reasons = combat.decide_combat(state)
+            if action is not None:
+                mode = _planner_mode_from_reasons(reasons)
+                return Decision(
+                    action,
+                    fallback_reason + [f"planner: {mode}"] + reasons,
+                )
+            return Decision(None, fallback_reason + reasons)
+
+    action, reasons = combat.decide_combat(state)
+    if action is not None:
+        mode = _planner_mode_from_reasons(reasons)
+        return Decision(action, pot_reasons + [f"planner: {mode}"] + reasons)
+    return Decision(None, pot_reasons + reasons)
+
+
+def _decide_ppo_macro(state: dict) -> Decision:
+    """PPO for map / shop / rest / event; rules only if predict/validate fails."""
+    prefix = ["ppo_macro"]
+    context_reasons: list[str] = []
+    if is_qwen_macro_context_enabled():
+        context_reasons = fetch_macro_qwen_context(state)
+
+    try:
+        from training.ppo_macro import get_ppo_macro_policy, predict_ppo_macro_masked
+
+        policy = get_ppo_macro_policy(
+            _ppo_macro_model_path,
+            _ppo_macro_config_path,
+        )
+        action, ppo_reasons = predict_ppo_macro_masked(policy, state)
+    except Exception as exc:
+        logger.warning("PPO macro failed: %s", exc)
+        rule_decision = _decide_rules(state)
+        return Decision(
+            rule_decision.action,
+            prefix + context_reasons + [f"load/predict error: {exc}", "→ rules"]
+            + rule_decision.reasons,
+        )
+
+    if action is None:
+        rule_decision = _decide_rules(state)
+        return Decision(
+            rule_decision.action,
+            prefix + context_reasons + ppo_reasons + ["→ rules"] + rule_decision.reasons,
+        )
+
+    action = normalize_policy_action(state, action)
+    try:
+        valid, reason = validate_policy_action(state, action)
+    except Exception as exc:
+        logger.warning("PPO macro validation error: %s - %s", exc, action)
+        rule_decision = _decide_rules(state)
+        return Decision(
+            rule_decision.action,
+            prefix
+            + context_reasons
+            + ppo_reasons
+            + [f"validation error: {exc}", "→ rules"]
+            + rule_decision.reasons,
+        )
+
+    if valid:
+        return Decision(action, prefix + context_reasons + ppo_reasons)
+
+    logger.debug("PPO macro rejected (%s): %s", reason, action)
+    rule_decision = _decide_rules(state)
+    return Decision(
+        rule_decision.action,
+        prefix
+        + context_reasons
+        + ppo_reasons
+        + [f"invalid: {reason}", "→ rules"]
+        + rule_decision.reasons,
+    )
+
+
+def _decide_card_reward_bc(state: dict) -> Decision:
+    """Human card-reward BC with masking; rules fallback if predict/validate fails."""
+    prefix = ["card_reward_bc"]
+    try:
+        from training.card_reward_bc import get_card_reward_policy, predict_card_reward_masked
+
+        policy = get_card_reward_policy(
+            _card_reward_model_path,
+            _card_reward_config_path,
+        )
+        action, bc_reasons = predict_card_reward_masked(policy, state)
+    except Exception as exc:
+        logger.warning("Card reward BC failed: %s", exc)
+        rule_decision = _decide_rules(state)
+        return Decision(
+            rule_decision.action,
+            prefix + [f"load/predict error: {exc}", "→ rules"] + rule_decision.reasons,
+        )
+
+    if action is None:
+        rule_decision = _decide_rules(state)
+        return Decision(
+            rule_decision.action,
+            prefix + bc_reasons + ["→ rules"] + rule_decision.reasons,
+        )
+
+    action = normalize_policy_action(state, action)
+    try:
+        valid, reason = validate_policy_action(state, action)
+    except Exception as exc:
+        logger.warning("Card reward BC validation error: %s - %s", exc, action)
+        rule_decision = _decide_rules(state)
+        return Decision(
+            rule_decision.action,
+            prefix + bc_reasons + [f"validation error: {exc}", "→ rules"] + rule_decision.reasons,
+        )
+
+    if valid:
+        return Decision(action, prefix + bc_reasons)
+
+    logger.debug("Card reward BC rejected (%s): %s", reason, action)
+    rule_decision = _decide_rules(state)
+    return Decision(
+        rule_decision.action,
+        prefix + bc_reasons + [f"invalid: {reason}", "→ rules"] + rule_decision.reasons,
+    )
+
+
 def _decide_policy(state: dict, state_type: str) -> Decision | None:
     try:
         from training.inference import get_policy
@@ -143,22 +390,23 @@ def decide(state: dict) -> Decision:
     if is_card_select_active(state) or state_type == "hand_select":
         return _decide_rules(state)
 
-    if policy_active_for_state(state_type):
-        pot_reasons: list[str] = []
-        if state_type in combat.COMBAT_STATE_TYPES:
-            pot_action, pot_reasons = combat.decide_combat_potion(state)
-            if pot_action:
-                return Decision(pot_action, ["potion priority (before policy)"] + pot_reasons)
+    if state_type == "card_reward" and card_reward_bc_enabled():
+        return _decide_card_reward_bc(state)
 
+    if state_type in combat.COMBAT_STATE_TYPES:
+        return _decide_combat(state, state_type)
+
+    if state_type in ppo_macro_state_types() and ppo_macro_enabled():
+        return _decide_ppo_macro(state)
+
+    if policy_active_for_state(state_type):
         policy_decision = _decide_policy(state, state_type)
         if policy_decision is not None and policy_decision.action is not None:
-            merged = pot_reasons + policy_decision.reasons
-            return Decision(policy_decision.action, merged)
+            return policy_decision
 
-        fallback_reason = ["rules fallback"]
+        fallback_reason = ["policy invalid → rules"]
         if policy_decision is not None and policy_decision.reasons:
             fallback_reason.extend(policy_decision.reasons)
-
         rule_decision = _decide_rules(state)
         return Decision(
             rule_decision.action,

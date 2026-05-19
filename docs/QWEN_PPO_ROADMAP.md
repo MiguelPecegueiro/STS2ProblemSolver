@@ -244,7 +244,7 @@ sequenceDiagram
 
 - At **combat start**, the agent reads enemy names from game state (Phase B / `combat_summary` path already identifies encounters).
 - **One Qwen call per fight** — before the first combat decision.
-- **Never mid-fight** — solves latency; no blocking the ~0.5s decision loop.
+- **Blocks synchronously at combat start** (up to 10s timeout) so turn 1 uses the right multipliers; never called mid-fight.
 
 #### 2. Input to Qwen
 

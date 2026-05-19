@@ -69,9 +69,9 @@ def _validate_play_card(state: dict, action: dict) -> tuple[bool, str]:
     if state_type not in combat.COMBAT_STATE_TYPES:
         return False, f"play_card invalid on state_type={state_type}"
     battle = state.get("battle") or {}
-    if battle.get("is_play_phase") is False:
-        return False, "not play phase"
-    if str(battle.get("turn") or "").lower() not in ("", "player"):
+    from sts2_agent.state_parse import is_player_combat_turn
+
+    if not is_player_combat_turn(state):
         return False, "not player turn"
 
     player = state.get("player") or {}
@@ -106,9 +106,10 @@ def _validate_end_turn(state: dict) -> tuple[bool, str]:
     state_type = str(state.get("state_type") or "").lower()
     if state_type not in combat.COMBAT_STATE_TYPES:
         return False, f"end_turn invalid on state_type={state_type}"
-    battle = state.get("battle") or {}
-    if battle.get("is_play_phase") is False:
-        return False, "not play phase"
+    from sts2_agent.state_parse import is_player_combat_turn
+
+    if not is_player_combat_turn(state):
+        return False, "not player turn"
     return True, "ok"
 
 

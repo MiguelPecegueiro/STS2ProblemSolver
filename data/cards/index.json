@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "fetched_at": "2026-05-19T12:30:07.617875+00:00",
+  "source": "https://spire-codex.com/api/cards",
+  "total_cards": 576,
+  "mapped_cards": 576,
+  "unmapped_count": 0,
+  "unmapped": [],
+  "sections": {
+    "ironclad": {
+      "label": "Ironclad",
+      "path": "by_color/ironclad.json",
+      "count": 87
+    },
+    "silent": {
+      "label": "Silent",
+      "path": "by_color/silent.json",
+      "count": 88
+    },
+    "defect": {
+      "label": "Defect",
+      "path": "by_color/defect.json",
+      "count": 88
+    },
+    "necrobinder": {
+      "label": "Necrobinder",
+      "path": "by_color/necrobinder.json",
+      "count": 88
+    },
+    "regent": {
+      "label": "Regent",
+      "path": "by_color/regent.json",
+      "count": 88
+    },
+    "colorless": {
+      "label": "Colorless",
+      "path": "by_color/colorless.json",
+      "count": 64
+    },
+    "token": {
+      "label": "Token",
+      "path": "by_color/token.json",
+      "count": 14
+    },
+    "curse": {
+      "label": "Curse",
+      "path": "by_color/curse.json",
+      "count": 18
+    },
+    "status": {
+      "label": "Status",
+      "path": "by_color/status.json",
+      "count": 11
+    },
+    "event": {
+      "label": "Event",
+      "path": "by_color/event.json",
+      "count": 27
+    },
+    "quest": {
+      "label": "Quest",
+      "path": "by_color/quest.json",
+      "count": 3
+    }
+  }
+}

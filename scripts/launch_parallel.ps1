@@ -6,6 +6,7 @@
 # Usage:
 #   .\scripts\launch_parallel.ps1
 #   .\scripts\launch_parallel.ps1 -Count 4 -Policy -WaitSeconds 60
+#   (-Policy adds --policy, --card-reward-model, --ppo-model to each agent)
 #
 # All instances share one Steam profile save folder. Agents use --instance-id which
 # enables abandoning a stale continue/abandon menu to reach singleplayer (recovery
@@ -196,7 +197,13 @@ function Start-Agent {
         "--data-dir", $dataDir,
         "--no-compendium"
     )
-    if ($Policy) { $agentArgs += "--policy" }
+    if ($Policy) {
+        $agentArgs += @(
+            "--policy",
+            "--card-reward-model", $CardRewardModel,
+            "--ppo-model", $PpoModel
+        )
+    }
 
     $proc = Start-Process -FilePath "py" -ArgumentList $agentArgs -PassThru -WorkingDirectory $RepoRoot
     $AgentProcs.Add($proc) | Out-Null

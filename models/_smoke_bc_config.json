@@ -1,0 +1,128 @@
+{
+  "feature_layout": {
+    "feature_dim": 195,
+    "max_hand": 10,
+    "max_enemies": 5,
+    "max_relics": 20,
+    "max_potions": 3,
+    "card_feat_dim": 6,
+    "enemy_feat_dim": 8,
+    "player_feat_dim": 8,
+    "pile_feat_dim": 5,
+    "state_types": [
+      "monster",
+      "elite",
+      "boss",
+      "hand_select",
+      "map",
+      "card_reward",
+      "rewards",
+      "treasure",
+      "rest_site",
+      "shop",
+      "event",
+      "card_select",
+      "menu",
+      "game_over",
+      "unknown"
+    ],
+    "hand_card_features": [
+      "cost_norm",
+      "is_attack",
+      "is_skill",
+      "is_power",
+      "is_upgraded",
+      "can_play"
+    ],
+    "pile_features": [
+      "attack_ratio_in_draw",
+      "block_ratio_in_draw",
+      "high_value_cards_in_draw",
+      "expected_block_next_turn",
+      "expected_damage_next_turn"
+    ]
+  },
+  "action_vocab": {
+    "num_actions": 8,
+    "action_to_id": {
+      "select_card_reward:0": 0,
+      "select_card_reward:1": 1,
+      "select_card_reward:2": 2,
+      "select_card_reward:3": 3,
+      "select_card_reward:4": 4,
+      "select_card_reward:6": 5,
+      "select_card_reward:9": 6,
+      "skip_card_reward": 7
+    },
+    "id_to_action_key": {
+      "0": "select_card_reward:0",
+      "1": "select_card_reward:1",
+      "2": "select_card_reward:2",
+      "3": "select_card_reward:3",
+      "4": "select_card_reward:4",
+      "5": "select_card_reward:6",
+      "6": "select_card_reward:9",
+      "7": "skip_card_reward"
+    },
+    "max_card_index": 9,
+    "max_generic_index": 9,
+    "max_potion_slot": 2,
+    "max_target_slot": 4
+  },
+  "training": {
+    "decisions_path": "C:\\Users\\migue\\Documents\\CursorRepo\\STS2ProblemSolver\\data\\decisions.jsonl",
+    "epochs": 1,
+    "batch_size": 256,
+    "lr": 0.001,
+    "min_run_score_percentile": 25.0,
+    "min_game_version": null,
+    "human_weight": 3.0,
+    "val_fraction": 0.2,
+    "seed": 42,
+    "dataset_meta": {
+      "num_rows_total": 9883,
+      "num_train": 7921,
+      "num_val": 1962,
+      "num_runs": 616,
+      "num_human_rows": 9883,
+      "human_weight": 3.0,
+      "min_run_score_used": null,
+      "min_run_score_percentile": 25.0,
+      "min_game_version": null,
+      "clean_only": true,
+      "filter": {
+        "clean_only": true,
+        "rows_kept": 9883,
+        "rows_discarded_phase_b": 0,
+        "kept_human": 9883,
+        "kept_agent_phase_b": 0,
+        "phase_b_run_count": 0
+      },
+      "run_score_min": 55.0,
+      "run_score_max": 2342.415322580645
+    },
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 0.7586712899442363,
+        "val_loss": 0.5507805796848144
+      }
+    ]
+  },
+  "metrics": {
+    "train": {
+      "accuracy": 0.7648024239363717,
+      "per_state_type": {
+        "card_reward": 0.7648024239363717
+      },
+      "num_samples": 7921
+    },
+    "val": {
+      "accuracy": 0.7619775739041794,
+      "per_state_type": {
+        "card_reward": 0.7619775739041794
+      },
+      "num_samples": 1962
+    }
+  }
+}

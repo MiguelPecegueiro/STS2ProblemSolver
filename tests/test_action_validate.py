@@ -85,3 +85,12 @@ def test_card_reward_skip_valid_when_can_skip() -> None:
     valid, reason = validate_policy_action(state, {"action": "skip_card_reward"})
     assert valid
     assert reason == "ok"
+
+
+def test_end_turn_rejected_on_enemy_turn() -> None:
+    state = _combat_state([])
+    state["battle"]["turn"] = "enemy"
+    state["battle"]["is_play_phase"] = True
+    valid, reason = validate_policy_action(state, {"action": "end_turn"})
+    assert not valid
+    assert "player turn" in reason

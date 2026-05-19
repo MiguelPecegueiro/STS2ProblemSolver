@@ -217,6 +217,7 @@ def load_decisions(_revision: str) -> pd.DataFrame:
                 "state_type": row.get("state_type"),
                 "action": action.get("action") if isinstance(action, dict) else None,
                 "card_index": action.get("card_index") if isinstance(action, dict) else None,
+                "action_index": action.get("index") if isinstance(action, dict) else None,
                 "action_reasoning": row.get("action_reasoning"),
                 "immediate_reward": immediate,
                 "block_applied": block_applied,
@@ -233,8 +234,34 @@ def load_decisions(_revision: str) -> pd.DataFrame:
                 or snap.get("card_reward_offered"),
                 "card_reward_picked": row.get("card_reward_picked")
                 or snap.get("card_reward_picked"),
+                "map_choice_index": row.get("map_choice_index"),
+                "map_room_chosen": row.get("map_room_chosen"),
+                "map_choice_options": row.get("map_choice_options")
+                or snap.get("map_choices"),
+                "combat_enemies": [
+                    e.get("name")
+                    for e in (snap.get("enemies") or [])
+                    if isinstance(e, dict) and e.get("name")
+                ],
+                "qwen_macro": row.get("qwen_macro"),
             }
         )
+    from dashboard.fields import qwen_reasoning_from_record
+
+    for row in flat:
+        qm = row.get("qwen_macro")
+        if not isinstance(qm, dict):
+            row["qwen_macro_source"] = None
+            row["qwen_macro_reasoning"] = None
+            row["qwen_macro_prompt"] = None
+            row["qwen_macro_response"] = None
+            continue
+        row["qwen_macro_source"] = qm.get("source")
+        row["qwen_macro_reasoning"] = qwen_reasoning_from_record(
+            qm, row.get("action_reasoning")
+        )
+        row["qwen_macro_prompt"] = qm.get("user_prompt")
+        row["qwen_macro_response"] = qm.get("response")
     df = pd.DataFrame(flat)
     if "timestamp" in df.columns:
         df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce", utc=True)
@@ -878,7 +905,9 @@ def main() -> None:
     if default_detail and default_detail not in detail_versions:
         detail_versions = sorted(set(detail_versions) | {default_detail})
 
-    tab_runs, tab_compendium = st.tabs(["Run analytics", "Enemy compendium"])
+    tab_runs, tab_explorer, tab_compendium, tab_cards = st.tabs(
+        ["Run analytics", "Run Explorer", "Enemy compendium", "Card compendium"]
+    )
 
     with tab_runs:
         st.title("STS2 Agent Dashboard")
@@ -951,12 +980,24 @@ def main() -> None:
             f"Last load: {datetime.now().strftime('%H:%M:%S')}"
         )
 
+    with tab_explorer:
+        from dashboard.run_explorer import render_run_explorer
+
+        render_run_explorer(runs_raw, decisions_raw)
+
     with tab_compendium:
         if str(DASHBOARD_DIR) not in sys.path:
             sys.path.insert(0, str(DASHBOARD_DIR))
-        from enemy_compendium import render_compendium
+        from monster_compendium import render_monster_compendium
 
-        render_compendium()
+        render_monster_compendium()
+
+    with tab_cards:
+        if str(DASHBOARD_DIR) not in sys.path:
+            sys.path.insert(0, str(DASHBOARD_DIR))
+        from card_compendium import render_card_compendium
+
+        render_card_compendium()
 
 
 if __name__ == "__main__":

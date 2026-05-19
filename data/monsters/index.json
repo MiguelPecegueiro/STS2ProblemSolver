@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "fetched_at": "2026-05-19T20:00:40.778188+00:00",
+  "source": "https://spire-codex.com/api/monsters",
+  "total_monsters": 115,
+  "mapped_monsters": 115,
+  "unmapped_count": 0,
+  "unmapped": [],
+  "sections": {
+    "normal": {
+      "label": "Normal",
+      "path": "by_type/normal.json",
+      "count": 82
+    },
+    "elite": {
+      "label": "Elite",
+      "path": "by_type/elite.json",
+      "count": 18
+    },
+    "boss": {
+      "label": "Boss",
+      "path": "by_type/boss.json",
+      "count": 15
+    },
+    "other": {
+      "label": "Other",
+      "path": "by_type/other.json",
+      "count": 0
+    }
+  }
+}

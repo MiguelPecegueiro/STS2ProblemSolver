@@ -145,3 +145,44 @@ def test_record_decision_includes_card_reward_offered():
     assert row["state_snapshot"]["card_reward_offered"] == ["Strike", "Defend", "Bash"]
     assert row["card_reward_picked"] == "Strike"
     assert row["state_snapshot"]["card_reward_picked"] == "Strike"
+
+
+def test_record_decision_includes_qwen_macro_trace():
+    from sts2_agent.qwen_macro import clear_macro_qwen_trace, pop_macro_qwen_trace
+
+    clear_macro_qwen_trace()
+    pop_macro_qwen_trace()
+
+    pipe = DataPipeline()
+    pipe._run_active = True
+    pipe.run_id = "test-run"
+    state = {
+        "state_type": "rest_site",
+        "run": {"floor": 8, "act": 1},
+        "player": {"hp": 50, "max_hp": 70},
+        "rest_site": {"options": [{"id": "rest", "is_enabled": True}]},
+    }
+
+    from sts2_agent.qwen_macro import _begin_macro_trace, _update_macro_trace
+
+    _begin_macro_trace("rest_site", "HP: 50/70\nPick rest option")
+    _update_macro_trace(
+        response='{"action":"choose_rest_option","index":0,"reasoning":"Heal"}',
+        parsed={"action": "choose_rest_option", "index": 0, "reasoning": "Heal"},
+        action={"action": "choose_rest_option", "index": 0},
+        source="qwen",
+    )
+
+    pipe.record_decision(
+        state,
+        {"action": "choose_rest_option", "index": 0},
+        ["qwen_macro: rest_site"],
+    )
+    pop_macro_qwen_trace()
+
+    assert len(pipe._buffer) == 1
+    qm = pipe._buffer[0].get("qwen_macro")
+    assert isinstance(qm, dict)
+    assert "HP: 50/70" in qm.get("user_prompt", "")
+    assert qm.get("source") == "qwen"
+    assert qm.get("response")

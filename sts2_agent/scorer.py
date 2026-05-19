@@ -378,6 +378,26 @@ def enemy_total_threat(enemy: dict) -> tuple[float, list[str]]:
     return total, reasons
 
 
+def enemy_incoming_attack_damage(enemy: dict) -> int:
+    """Attack damage this enemy would deal this turn (0 if not attacking)."""
+    if int(enemy.get("hp") or 0) <= 0:
+        return 0
+    total = 0
+    intents = enemy.get("intents") or []
+    if isinstance(enemy.get("intent"), dict):
+        intents = [enemy["intent"]]
+    for intent in intents:
+        if not intent_is_attack(intent):
+            continue
+        threat, label = intent_threat_score(intent)
+        dmg = _intent_damage_value(intent)
+        if dmg <= 0:
+            dmg = int(threat) if threat > 5 and label.startswith("attack") else 0
+        if dmg > 0:
+            total += dmg
+    return total
+
+
 def total_incoming_attack_damage(enemies: list[dict]) -> tuple[int, list[str]]:
     total = 0
     reasons: list[str] = []
@@ -1123,10 +1143,13 @@ def combat_turn_shaping(
     hp_lost_this_turn: int,
     block_applied: int,
     damage_dealt: int,
+    *,
+    damage_mult: float = 1.0,
+    hp_loss_mult: float = 0.5,
 ) -> float:
     """Small per-action signal during combat (before end-of-combat payout)."""
     return (
-        -float(hp_lost_this_turn) * 0.5
+        -float(hp_lost_this_turn) * hp_loss_mult
         + float(block_applied) * 0.3
-        + float(damage_dealt) * 1.0
+        + float(damage_dealt) * damage_mult
     )

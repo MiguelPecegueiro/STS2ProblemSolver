@@ -1,0 +1,27 @@
+{
+  "tier": "A",
+  "note": "Sim: Hardened Shell (15 HP cap/player turn), Zoom attack+10 block on enemy turn. Inertia +2 Str not simulated.",
+  "sources": {
+    "primary": "https://slaythespire2.gg/enemies/skulking-colony (Beta v0.103.2)",
+    "hp": "70 (A0), 75 (A8+)"
+  },
+  "enemy": {
+    "id": "skulking_colony",
+    "name": "Skulking Colony",
+    "hp": 70,
+    "pattern_intents": [
+      { "kind": "attack", "value": 12, "label": "Inertia (opening)" },
+      { "kind": "attack", "value": 14, "enemy_block_bonus": 10, "label": "Zoom" },
+      { "kind": "attack", "value": 9, "label": "Inertia (+2 Str in game)" },
+      { "kind": "attack", "value": 14, "label": "Piercing Stabs (7×2)" }
+    ],
+    "cycle_raw": "Inertia → Zoom → Inertia → Piercing Stabs → repeat",
+    "powers_simulated": [
+      "Hardened Shell: max 15 HP lost per player turn",
+      "Zoom: +10 enemy block when that intent fires"
+    ],
+    "powers_not_simulated": [
+      "Inertia: +2 Strength on 2nd and 4th cycle steps"
+    ]
+  }
+}

@@ -30,6 +30,7 @@ Reference for layout, APIs, and where to change behavior. Use the TOC to jump ar
 
 - [Model checkpoint lineage](MODEL_LINEAGE.md) — BC/PPO version history, collapse notes, artifact paths.
 - [Qwen + PPO roadmap](QWEN_PPO_ROADMAP.md) — strategic LLM layer, prerequisites, integration phases, risks.
+- [Combat sim vision & roadmap](COMBAT_SIM.md) — mathematical fight solver, design principles, path to card-reward odds.
 - [Patch management](PATCH_MANAGEMENT.md) — balance patch impact levels, retrain triggers, data versioning.
 - [Dashboard spec](DASHBOARD.md) — Phase A metrics, sections, Phase B backlog.
 

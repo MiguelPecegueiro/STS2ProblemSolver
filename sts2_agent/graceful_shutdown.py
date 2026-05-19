@@ -37,8 +37,6 @@ class GracefulShutdown:
         if not self.requested:
             return False
 
-        state_type = str(state.get("state_type") or "").lower()
-
         # Requested while idle between runs - nothing to finish.
         if not self._was_in_run and not run_in_progress:
             return True
@@ -49,18 +47,13 @@ class GracefulShutdown:
         pipeline = get_pipeline()
         run_still_active = bool(getattr(pipeline, "_run_active", False))
 
-        if self._saw_game_over and not run_still_active:
-            return True
-
-        if (
-            self._was_in_run
-            and not run_in_progress
-            and state_type in ("menu", "game_over", "")
-            and not run_still_active
-        ):
-            return True
-
-        return False
+        return _run_finished_for_exit(
+            state,
+            run_in_progress=run_in_progress,
+            saw_game_over=self._saw_game_over,
+            require_was_in_run=True,
+            was_in_run=self._was_in_run,
+        )
 
 
 def install_graceful_shutdown_handler(on_request: Callable[[], None]) -> None:
@@ -82,3 +75,73 @@ def shutdown_help_message() -> str:
     if hasattr(signal, "SIGUSR1"):
         parts.append("SIGUSR1 (kill -USR1 <pid>) to finish the current run, then stop")
     return " | ".join(parts)
+
+
+class SingleRunController:
+    """Exit after one completed run (no menu restart for a second run)."""
+
+    def __init__(self) -> None:
+        self._was_in_run = False
+        self._saw_game_over = False
+        self._blocked_restart = False
+
+    def observe(self, state: dict, *, run_in_progress: bool) -> None:
+        if run_in_progress:
+            self._was_in_run = True
+        state_type = str(state.get("state_type") or "").lower()
+        if state_type == "game_over":
+            self._saw_game_over = True
+
+    def apply_menu_block(self, menu_flow: object) -> None:
+        if self._saw_game_over and not self._blocked_restart:
+            block = getattr(menu_flow, "block_restart", None)
+            if callable(block):
+                block()
+            self._blocked_restart = True
+
+    def should_exit(
+        self,
+        state: dict,
+        *,
+        run_in_progress: bool,
+        menu_flow: object,
+    ) -> bool:
+        if not self._was_in_run:
+            return False
+        self.apply_menu_block(menu_flow)
+        return _run_finished_for_exit(
+            state,
+            run_in_progress=run_in_progress,
+            saw_game_over=self._saw_game_over,
+        )
+
+
+def _run_finished_for_exit(
+    state: dict,
+    *,
+    run_in_progress: bool,
+    saw_game_over: bool,
+    require_was_in_run: bool = False,
+    was_in_run: bool = True,
+) -> bool:
+    if require_was_in_run and not was_in_run:
+        return False
+
+    from sts2_agent.data_pipeline import get_pipeline
+
+    state_type = str(state.get("state_type") or "").lower()
+    pipeline = get_pipeline()
+    run_still_active = bool(getattr(pipeline, "_run_active", False))
+
+    if saw_game_over and not run_still_active:
+        return True
+
+    if (
+        was_in_run
+        and not run_in_progress
+        and state_type in ("menu", "game_over", "")
+        and not run_still_active
+    ):
+        return True
+
+    return False

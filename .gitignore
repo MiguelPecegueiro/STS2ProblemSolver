@@ -1,6 +1,10 @@
 cache/
 logs/
 data/*
+!data/cards/
+!data/cards/**/*
+!data/monsters/
+!data/monsters/**/*
 !data/imported_runs/
 data/imported_runs/*
 !data/imported_runs/.gitkeep

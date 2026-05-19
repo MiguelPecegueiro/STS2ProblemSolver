@@ -1,0 +1,31 @@
+{
+  "scenario": "bygone_effigy_sim2",
+  "tier": "A",
+  "note": "Fixed pattern for combat_sim — no enemy Strength. Full mechanics deferred to agent integration.",
+  "sources": {
+    "hp": "https://slaythespire2.gg/enemies/bygone-effigy — 127 (A0)",
+    "pattern": "Initial Sleep → Awaken (+10 Str) → Slashes; Tier A uses effective slash damage"
+  },
+  "enemy": {
+    "id": "bygone_effigy",
+    "name": "Bygone Effigy",
+    "hp": 127,
+    "pattern_intents": [
+      { "kind": "attack", "value": 0, "label": "Initial Sleep" },
+      { "kind": "attack", "value": 0, "label": "Awaken (+10 Str in game)" },
+      { "kind": "attack", "value": 23, "label": "Slashes (13 base + 10 Str; effective)" }
+    ],
+    "cycle_raw": "Sleep → Awaken → Slashes → repeat",
+    "powers_simulated": [
+      "Slow: +10% attack damage taken per card played this turn (resets end of turn)"
+    ]
+  },
+  "deck": "IRONCLAD_STARTER_SIM2 (5 Strike, 4 Defend, 1 Bash, 1 Bloodletting)",
+  "stress_test_batch_20_seeds": {
+    "base_seed": 0,
+    "max_turns": 30,
+    "sim0": { "avg_enemy_hp_left": 127.0, "avg_turns": 12.0, "loss_turns": { "12": 20 } },
+    "sim1": { "avg_enemy_hp_left": 127.0, "avg_turns": 12.0, "loss_turns": { "12": 20 } },
+    "sim2": { "avg_enemy_hp_left": 67.85, "avg_enemy_pct_left": 0.5343, "avg_turns": 13.65, "loss_turns": { "12": 9, "15": 11 } }
+  }
+}

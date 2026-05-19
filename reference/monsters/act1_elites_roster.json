@@ -1,0 +1,34 @@
+{
+  "act": 1,
+  "note": "Act 1 elite roster for combat_sim. Tier A = attack/block intents only; powers and multi-enemy deferred.",
+  "elites": [
+    {
+      "id": "bygone_effigy",
+      "name": "Bygone Effigy",
+      "region": "Overgrowth",
+      "encounter_id": "ENCOUNTER.BYGONE_EFFIGY_ELITE",
+      "monster_id": "MONSTER.BYGONE_EFFIGY",
+      "reference_file": "bygone_effigy_tier_a.json",
+      "hp_a0": 127
+    },
+    {
+      "id": "skulking_colony",
+      "name": "Skulking Colony",
+      "region": "Underdocks",
+      "encounter_id": "ENCOUNTER.SKULKING_COLONY_ELITE",
+      "monster_id": "MONSTER.SKULKING_COLONY",
+      "reference_file": "skulking_colony_tier_a.json",
+      "hp_a0": 70,
+      "alias_note": "Game name is Skulking Colony (not Sulking)."
+    },
+    {
+      "id": "phantasmal_gardener",
+      "name": "Phantasmal Gardener",
+      "region": "Underdocks",
+      "encounter_id": "ENCOUNTER.PHANTASMAL_GARDENERS_ELITE",
+      "monster_id": "MONSTER.PHANTASMAL_GARDENER",
+      "reference_file": "phantasmal_gardener_tier_a.json",
+      "hp_a0": "26-31 per gardener, 4 enemies in encounter"
+    }
+  ]
+}

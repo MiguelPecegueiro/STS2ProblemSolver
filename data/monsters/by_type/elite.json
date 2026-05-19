@@ -1,0 +1,2362 @@
+{
+  "section": "elite",
+  "label": "Elite",
+  "fetched_at": "2026-05-19T20:00:40.778188+00:00",
+  "source": "https://spire-codex.com/api/monsters",
+  "count": 18,
+  "monsters": [
+    {
+      "id": "BYGONE_EFFIGY",
+      "name": "Bygone Effigy",
+      "type": "Elite",
+      "min_hp": 127,
+      "max_hp": null,
+      "min_hp_ascension": 132,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "INITIAL_SLEEP",
+          "name": "Initial Sleep",
+          "intent": "Sleep",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "WAKE",
+          "name": "Wake",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 10
+            }
+          ]
+        },
+        {
+          "id": "SLEEP",
+          "name": "Sleep",
+          "intent": "Sleep",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SLASHES",
+          "name": "Slashes",
+          "intent": "Attack",
+          "damage": {
+            "normal": 13,
+            "ascension": 15,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Slash": {
+          "normal": 13,
+          "ascension": 15,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "BYGONE_EFFIGY_ELITE",
+          "encounter_name": "Bygone Effigy",
+          "room_type": "Elite",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "INITIAL_SLEEP",
+        "states": [
+          {
+            "id": "INITIAL_SLEEP_MOVE",
+            "type": "move",
+            "move_id": "INITIAL_SLEEP",
+            "must_perform_once": null,
+            "next": "WAKE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "WAKE_MOVE",
+            "type": "move",
+            "move_id": "WAKE",
+            "must_perform_once": null,
+            "next": "SLASHES_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SLEEP_MOVE",
+            "type": "move",
+            "move_id": "SLEEP",
+            "must_perform_once": null,
+            "next": "SLASHES_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SLASHES_MOVE",
+            "type": "move",
+            "move_id": "SLASHES",
+            "must_perform_once": null,
+            "next": "SLASHES_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Initial Sleep → Wake → Slashes → repeat"
+      },
+      "image_url": "/static/images/monsters/bygone_effigy.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "BYRDONIS",
+      "name": "Byrdonis",
+      "type": "Elite",
+      "min_hp": 81,
+      "max_hp": 84,
+      "min_hp_ascension": 90,
+      "max_hp_ascension": 90,
+      "moves": [
+        {
+          "id": "PECK",
+          "name": "Peck",
+          "intent": "Attack",
+          "damage": {
+            "normal": 3,
+            "ascension": 4,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SWOOP",
+          "name": "Swoop",
+          "intent": "Attack",
+          "damage": {
+            "normal": 17,
+            "ascension": 19,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Peck": {
+          "normal": 3,
+          "ascension": 4,
+          "hit_count": 3
+        },
+        "Swoop": {
+          "normal": 17,
+          "ascension": 19,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "BYRDONIS_ELITE",
+          "encounter_name": "Byrdonis",
+          "room_type": "Elite",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "SWOOP",
+        "states": [
+          {
+            "id": "PECK_MOVE",
+            "type": "move",
+            "move_id": "PECK",
+            "must_perform_once": null,
+            "next": "SWOOP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SWOOP_MOVE",
+            "type": "move",
+            "move_id": "SWOOP",
+            "must_perform_once": null,
+            "next": "PECK_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Swoop → Peck → repeat"
+      },
+      "image_url": "/static/images/monsters/byrdonis.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "DECIMILLIPEDE_SEGMENT",
+      "name": "Decimillipede",
+      "type": "Elite",
+      "min_hp": 40,
+      "max_hp": 46,
+      "min_hp_ascension": 46,
+      "max_hp_ascension": 52,
+      "moves": [
+        {
+          "id": "WRITHE",
+          "name": "Writhe",
+          "intent": "Attack",
+          "damage": {
+            "normal": 5,
+            "ascension": 6,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BULK",
+          "name": "Bulk",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "CONSTRICT",
+          "name": "Constrict",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "DEAD",
+          "name": "Dead",
+          "intent": "Unknown",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "REATTACH",
+          "name": "Reattach",
+          "intent": "Heal",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Writhe": {
+          "normal": 5,
+          "ascension": 6,
+          "hit_count": 2
+        },
+        "Constrict": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": null
+        },
+        "Bulk": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": null,
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "random",
+        "initial_move": null,
+        "states": [
+          {
+            "id": "WRITHE_MOVE",
+            "type": "move",
+            "move_id": "WRITHE",
+            "must_perform_once": null,
+            "next": "CONSTRICT_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BULK_MOVE",
+            "type": "move",
+            "move_id": "BULK",
+            "must_perform_once": null,
+            "next": "WRITHE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "CONSTRICT_MOVE",
+            "type": "move",
+            "move_id": "CONSTRICT",
+            "must_perform_once": null,
+            "next": "BULK_MOVE",
+            "branches": null
+          },
+          {
+            "id": "REATTACH_MOVE",
+            "type": "move",
+            "move_id": "REATTACH",
+            "must_perform_once": true,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "DEAD_MOVE",
+            "type": "move",
+            "move_id": "DEAD",
+            "must_perform_once": null,
+            "next": "REATTACH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          }
+        ],
+        "description": ""
+      },
+      "image_url": "/static/images/monsters/decimillipede.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": null
+    },
+    {
+      "id": "DECIMILLIPEDE_SEGMENT_BACK",
+      "name": "Decimillipede Segment (Back)",
+      "type": "Elite",
+      "min_hp": 40,
+      "max_hp": 46,
+      "min_hp_ascension": 46,
+      "max_hp_ascension": 52,
+      "moves": [
+        {
+          "id": "WRITHE",
+          "name": "Writhe",
+          "intent": "Attack",
+          "damage": {
+            "normal": 5,
+            "ascension": 6,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BULK",
+          "name": "Bulk",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "CONSTRICT",
+          "name": "Constrict",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "DEAD",
+          "name": "Dead",
+          "intent": "Unknown",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "REATTACH",
+          "name": "Reattach",
+          "intent": "Heal",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Writhe": {
+          "normal": 5,
+          "ascension": 6,
+          "hit_count": 2
+        },
+        "Constrict": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": null
+        },
+        "Bulk": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "DECIMILLIPEDE_ELITE",
+          "encounter_name": "The Decimillipede",
+          "room_type": "Elite",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": null,
+      "image_url": "/static/images/monsters/decimillipede_segment_back.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "DECIMILLIPEDE_SEGMENT_FRONT",
+      "name": "Decimillipede Segment (Front)",
+      "type": "Elite",
+      "min_hp": 40,
+      "max_hp": 46,
+      "min_hp_ascension": 46,
+      "max_hp_ascension": 52,
+      "moves": [
+        {
+          "id": "WRITHE",
+          "name": "Writhe",
+          "intent": "Attack",
+          "damage": {
+            "normal": 5,
+            "ascension": 6,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BULK",
+          "name": "Bulk",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "CONSTRICT",
+          "name": "Constrict",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "DEAD",
+          "name": "Dead",
+          "intent": "Unknown",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "REATTACH",
+          "name": "Reattach",
+          "intent": "Heal",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Writhe": {
+          "normal": 5,
+          "ascension": 6,
+          "hit_count": 2
+        },
+        "Constrict": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": null
+        },
+        "Bulk": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "DECIMILLIPEDE_ELITE",
+          "encounter_name": "The Decimillipede",
+          "room_type": "Elite",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": null,
+      "image_url": "/static/images/monsters/decimillipede_segment_front.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "DECIMILLIPEDE_SEGMENT_MIDDLE",
+      "name": "Decimillipede Segment (Middle)",
+      "type": "Elite",
+      "min_hp": 40,
+      "max_hp": 46,
+      "min_hp_ascension": 46,
+      "max_hp_ascension": 52,
+      "moves": [
+        {
+          "id": "WRITHE",
+          "name": "Writhe",
+          "intent": "Attack",
+          "damage": {
+            "normal": 5,
+            "ascension": 6,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BULK",
+          "name": "Bulk",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "CONSTRICT",
+          "name": "Constrict",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "DEAD",
+          "name": "Dead",
+          "intent": "Unknown",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "REATTACH",
+          "name": "Reattach",
+          "intent": "Heal",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Writhe": {
+          "normal": 5,
+          "ascension": 6,
+          "hit_count": 2
+        },
+        "Constrict": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": null
+        },
+        "Bulk": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "DECIMILLIPEDE_ELITE",
+          "encounter_name": "The Decimillipede",
+          "room_type": "Elite",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": null,
+      "image_url": "/static/images/monsters/decimillipede_segment_middle.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "ENTOMANCER",
+      "name": "Entomancer",
+      "type": "Elite",
+      "min_hp": 145,
+      "max_hp": null,
+      "min_hp_ascension": 155,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "PHEROMONE_SPIT",
+          "name": "Pheromone Spit",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "PERSONAL_HIVE",
+              "target": "self",
+              "amount": 1
+            },
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 1
+            },
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "BEES",
+          "name": "Beeeees!",
+          "intent": "Attack",
+          "damage": {
+            "normal": 3,
+            "ascension": 3,
+            "hit_count": 7
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SPEAR",
+          "name": "Spear!",
+          "intent": "Attack",
+          "damage": {
+            "normal": 18,
+            "ascension": 20,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "SpearMove": {
+          "normal": 18,
+          "ascension": 20,
+          "hit_count": null
+        },
+        "Bees": {
+          "normal": 3,
+          "ascension": 3,
+          "hit_count": 7
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "ENTOMANCER_ELITE",
+          "encounter_name": "Entomancer",
+          "room_type": "Elite",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "BEES",
+        "states": [
+          {
+            "id": "PHEROMONE_SPIT_MOVE",
+            "type": "move",
+            "move_id": "PHEROMONE_SPIT",
+            "must_perform_once": null,
+            "next": "BEES_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BEES_MOVE",
+            "type": "move",
+            "move_id": "BEES",
+            "must_perform_once": null,
+            "next": null,
+            "branches": null
+          },
+          {
+            "id": "SPEAR_MOVE",
+            "type": "move",
+            "move_id": "SPEAR",
+            "must_perform_once": null,
+            "next": null,
+            "branches": null
+          }
+        ],
+        "description": "Always uses Beeeees!"
+      },
+      "image_url": "/static/images/monsters/entomancer.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "FLAIL_KNIGHT",
+      "name": "Flail Knight",
+      "type": "Elite",
+      "min_hp": 101,
+      "max_hp": null,
+      "min_hp_ascension": 108,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "WAR_CHANT",
+          "name": "War Chant",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "FLAIL",
+          "name": "Flail",
+          "intent": "Attack",
+          "damage": {
+            "normal": 9,
+            "ascension": 10,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "RAM",
+          "name": "Ram",
+          "intent": "Attack",
+          "damage": {
+            "normal": 15,
+            "ascension": 17,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Flail": {
+          "normal": 9,
+          "ascension": 10,
+          "hit_count": 2
+        },
+        "Ram": {
+          "normal": 15,
+          "ascension": 17,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "KNIGHTS_ELITE",
+          "encounter_name": "Knight Gang",
+          "room_type": "Elite",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "random",
+        "initial_move": "RAM",
+        "states": [
+          {
+            "id": "WAR_CHANT",
+            "type": "move",
+            "move_id": "WAR_CHANT",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "FLAIL_MOVE",
+            "type": "move",
+            "move_id": "FLAIL",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "RAM_MOVE",
+            "type": "move",
+            "move_id": "RAM",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          }
+        ],
+        "description": "Starts with Ram"
+      },
+      "image_url": "/static/images/monsters/flail_knight.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "INFESTED_PRISM",
+      "name": "Infested Prism",
+      "type": "Elite",
+      "min_hp": 200,
+      "max_hp": null,
+      "min_hp_ascension": 215,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "JAB",
+          "name": "Jab",
+          "intent": "Attack",
+          "damage": {
+            "normal": 22,
+            "ascension": 24,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "RADIATE",
+          "name": "Radiate",
+          "intent": "Attack + Defend",
+          "damage": {
+            "normal": 16,
+            "ascension": 18,
+            "hit_count": null
+          },
+          "block": 16,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "WHIRLWIND",
+          "name": "Whirlwind",
+          "intent": "Attack",
+          "damage": {
+            "normal": 9,
+            "ascension": 10,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "PULSATE",
+          "name": "Pulsate",
+          "intent": "Buff + Defend",
+          "damage": null,
+          "block": 20,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 4
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Jab": {
+          "normal": 22,
+          "ascension": 24,
+          "hit_count": null
+        },
+        "Radiate": {
+          "normal": 16,
+          "ascension": 18,
+          "hit_count": null
+        },
+        "Whirlwind": {
+          "normal": 9,
+          "ascension": 10,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "INFESTED_PRISMS_ELITE",
+          "encounter_name": "Infested Prism",
+          "room_type": "Elite",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "JAB",
+        "states": [
+          {
+            "id": "JAB_MOVE",
+            "type": "move",
+            "move_id": "JAB",
+            "must_perform_once": null,
+            "next": "RADIATE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RADIATE_MOVE",
+            "type": "move",
+            "move_id": "RADIATE",
+            "must_perform_once": null,
+            "next": "WHIRLWIND_MOVE",
+            "branches": null
+          },
+          {
+            "id": "WHIRLWIND_MOVE",
+            "type": "move",
+            "move_id": "WHIRLWIND",
+            "must_perform_once": null,
+            "next": "PULSATE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PULSATE_MOVE",
+            "type": "move",
+            "move_id": "PULSATE",
+            "must_perform_once": null,
+            "next": "JAB_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Jab → Radiate → Whirlwind → Pulsate → repeat"
+      },
+      "image_url": "/static/images/monsters/infested_prism.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "MAGI_KNIGHT",
+      "name": "Magi Knight",
+      "type": "Elite",
+      "min_hp": 82,
+      "max_hp": null,
+      "min_hp_ascension": 89,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "FIRST_POWER_SHIELD",
+          "name": "First Power Shield",
+          "intent": "Attack + Defend",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": 5,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "DAMPEN",
+          "name": "Dampen",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "PREP",
+          "name": "Prep",
+          "intent": "Defend",
+          "damage": null,
+          "block": 5,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "MAGIC_BOMB",
+          "name": "Magic Bomb",
+          "intent": "Attack",
+          "damage": {
+            "normal": 35,
+            "ascension": 40,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "RAM",
+          "name": "Ram",
+          "intent": "Attack",
+          "damage": {
+            "normal": 10,
+            "ascension": 11,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "PowerShield": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": null
+        },
+        "Spear": {
+          "normal": 10,
+          "ascension": 11,
+          "hit_count": null
+        },
+        "Bomb": {
+          "normal": 35,
+          "ascension": 40,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "KNIGHTS_ELITE",
+          "encounter_name": "Knight Gang",
+          "room_type": "Elite",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "FIRST_POWER_SHIELD",
+        "states": [
+          {
+            "id": "FIRST_POWER_SHIELD_MOVE",
+            "type": "move",
+            "move_id": "FIRST_POWER_SHIELD",
+            "must_perform_once": null,
+            "next": "DAMPEN_MOVE",
+            "branches": null
+          },
+          {
+            "id": "DAMPEN_MOVE",
+            "type": "move",
+            "move_id": "DAMPEN",
+            "must_perform_once": null,
+            "next": "RAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PREP_MOVE",
+            "type": "move",
+            "move_id": "PREP",
+            "must_perform_once": null,
+            "next": "MAGIC_BOMB",
+            "branches": null
+          },
+          {
+            "id": "MAGIC_BOMB",
+            "type": "move",
+            "move_id": "MAGIC_BOMB",
+            "must_perform_once": null,
+            "next": "RAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RAM_MOVE",
+            "type": "move",
+            "move_id": "RAM",
+            "must_perform_once": null,
+            "next": "PREP_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "First Power Shield → Dampen → Ram → Prep → Magic Bomb → repeat"
+      },
+      "image_url": "/static/images/monsters/magi_knight.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "MECHA_KNIGHT",
+      "name": "Mecha Knight",
+      "type": "Elite",
+      "min_hp": 300,
+      "max_hp": null,
+      "min_hp_ascension": 320,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "CHARGE",
+          "name": "Charge",
+          "intent": "Attack",
+          "damage": {
+            "normal": 25,
+            "ascension": 30,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "FLAMETHROWER",
+          "name": "Flamethrower",
+          "intent": "Status",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "WINDUP",
+          "name": "Windup",
+          "intent": "Defend + Buff",
+          "damage": null,
+          "block": 15,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 5
+            }
+          ]
+        },
+        {
+          "id": "HEAVY_CLEAVE",
+          "name": "Heavy Cleave",
+          "intent": "Attack",
+          "damage": {
+            "normal": 35,
+            "ascension": 40,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Charge": {
+          "normal": 25,
+          "ascension": 30,
+          "hit_count": null
+        },
+        "HeavyCleave": {
+          "normal": 35,
+          "ascension": 40,
+          "hit_count": null
+        }
+      },
+      "block_values": {
+        "windup": 15
+      },
+      "encounters": [
+        {
+          "encounter_id": "MECHA_KNIGHT_ELITE",
+          "encounter_name": "Mecha Knight",
+          "room_type": "Elite",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "CHARGE",
+        "states": [
+          {
+            "id": "CHARGE_MOVE",
+            "type": "move",
+            "move_id": "CHARGE",
+            "must_perform_once": null,
+            "next": "FLAMETHROWER_MOVE",
+            "branches": null
+          },
+          {
+            "id": "FLAMETHROWER_MOVE",
+            "type": "move",
+            "move_id": "FLAMETHROWER",
+            "must_perform_once": null,
+            "next": "WINDUP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "WINDUP_MOVE",
+            "type": "move",
+            "move_id": "WINDUP",
+            "must_perform_once": null,
+            "next": "HEAVY_CLEAVE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "HEAVY_CLEAVE_MOVE",
+            "type": "move",
+            "move_id": "HEAVY_CLEAVE",
+            "must_perform_once": null,
+            "next": "FLAMETHROWER_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Charge → Flamethrower → Windup → Heavy Cleave → repeat"
+      },
+      "image_url": "/static/images/monsters/mecha_knight.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "PHANTASMAL_GARDENER",
+      "name": "Phantasmal Gardener",
+      "type": "Elite",
+      "min_hp": 26,
+      "max_hp": 31,
+      "min_hp_ascension": 27,
+      "max_hp_ascension": 32,
+      "moves": [
+        {
+          "id": "BITE",
+          "name": "Bite",
+          "intent": "Attack",
+          "damage": {
+            "normal": 5,
+            "ascension": 5,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "LASH",
+          "name": "Lash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 7,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "FLAIL",
+          "name": "Flail",
+          "intent": "Attack",
+          "damage": {
+            "normal": 1,
+            "ascension": null,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "ENLARGE",
+          "name": "Enlarge",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Bite": {
+          "normal": 5,
+          "ascension": 5,
+          "hit_count": null
+        },
+        "Lash": {
+          "normal": 7,
+          "ascension": 7,
+          "hit_count": null
+        },
+        "Flail": {
+          "normal": 1,
+          "ascension": null,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "PHANTASMAL_GARDENERS_ELITE",
+          "encounter_name": "Phantasmal Gardeners",
+          "room_type": "Elite",
+          "act": "Act 1 - Underdocks",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": [
+        {
+          "power_id": "SKITTISH",
+          "amount": 6,
+          "amount_ascension": 7
+        }
+      ],
+      "attack_pattern": {
+        "type": "conditional",
+        "initial_move": "INIT_MOVE",
+        "states": [
+          {
+            "id": "BITE_MOVE",
+            "type": "move",
+            "move_id": "BITE",
+            "must_perform_once": null,
+            "next": "LASH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "LASH_MOVE",
+            "type": "move",
+            "move_id": "LASH",
+            "must_perform_once": null,
+            "next": "FLAIL_MOVE",
+            "branches": null
+          },
+          {
+            "id": "FLAIL_MOVE",
+            "type": "move",
+            "move_id": "FLAIL",
+            "must_perform_once": null,
+            "next": "ENLARGE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "ENLARGE_MOVE",
+            "type": "move",
+            "move_id": "ENLARGE",
+            "must_perform_once": null,
+            "next": "BITE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "INIT_MOVE",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "FLAIL",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"first\""
+              },
+              {
+                "move_id": "BITE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"second\""
+              },
+              {
+                "move_id": "LASH",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"third\""
+              },
+              {
+                "move_id": "ENLARGE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"fourth\""
+              }
+            ]
+          }
+        ],
+        "description": "then conditional: Flail (if in first slot) / Bite (if in second slot) / Lash (if in third slot) / Enlarge (if in fourth slot)"
+      },
+      "image_url": "/static/images/monsters/phantasmal_gardener.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Underdocks"
+    },
+    {
+      "id": "PHROG_PARASITE",
+      "name": "Phrog Parasite",
+      "type": "Elite",
+      "min_hp": 61,
+      "max_hp": 64,
+      "min_hp_ascension": 66,
+      "max_hp_ascension": 68,
+      "moves": [
+        {
+          "id": "INFECT",
+          "name": "Infect",
+          "intent": "Status",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "LASH",
+          "name": "Lash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 4,
+            "ascension": 5,
+            "hit_count": 4
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Lash": {
+          "normal": 4,
+          "ascension": 5,
+          "hit_count": 4
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "PHROG_PARASITE_ELITE",
+          "encounter_name": "Phrog Parasite",
+          "room_type": "Elite",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "random",
+        "initial_move": "INFECT",
+        "states": [
+          {
+            "id": "INFECT_MOVE",
+            "type": "move",
+            "move_id": "INFECT",
+            "must_perform_once": null,
+            "next": "LASH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "LASH_MOVE",
+            "type": "move",
+            "move_id": "LASH",
+            "must_perform_once": null,
+            "next": "INFECT_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          }
+        ],
+        "description": "Starts: Infect → Lash"
+      },
+      "image_url": "/static/images/monsters/phrog_parasite.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "SKULKING_COLONY",
+      "name": "Skulking Colony",
+      "type": "Elite",
+      "min_hp": 70,
+      "max_hp": null,
+      "min_hp_ascension": 75,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "SMASH",
+          "name": "Smash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 12,
+            "ascension": 13,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "ZOOM",
+          "name": "Zoom",
+          "intent": "Attack + Defend",
+          "damage": {
+            "normal": 14,
+            "ascension": 16,
+            "hit_count": null
+          },
+          "block": 10,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "INERTIA",
+          "name": "Inertia",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 9,
+            "ascension": 11,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "PIERCING_STABS",
+          "name": "Piercing Stabs",
+          "intent": "Attack",
+          "damage": {
+            "normal": 7,
+            "ascension": 8,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Smash": {
+          "normal": 12,
+          "ascension": 13,
+          "hit_count": null
+        },
+        "Inertia": {
+          "normal": 9,
+          "ascension": 11,
+          "hit_count": null
+        },
+        "Zoom": {
+          "normal": 14,
+          "ascension": 16,
+          "hit_count": null
+        },
+        "PiercingStabs": {
+          "normal": 7,
+          "ascension": 8,
+          "hit_count": 2
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "SKULKING_COLONY_ELITE",
+          "encounter_name": "Skulking Colony",
+          "room_type": "Elite",
+          "act": "Act 1 - Underdocks",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "SMASH",
+        "states": [
+          {
+            "id": "SMASH_MOVE",
+            "type": "move",
+            "move_id": "SMASH",
+            "must_perform_once": null,
+            "next": "ZOOM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "ZOOM_MOVE",
+            "type": "move",
+            "move_id": "ZOOM",
+            "must_perform_once": null,
+            "next": "INERTIA_MOVE",
+            "branches": null
+          },
+          {
+            "id": "INERTIA_MOVE",
+            "type": "move",
+            "move_id": "INERTIA",
+            "must_perform_once": null,
+            "next": "PIERCING_STABS_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PIERCING_STABS_MOVE",
+            "type": "move",
+            "move_id": "PIERCING_STABS",
+            "must_perform_once": null,
+            "next": "SMASH_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Smash → Zoom → Inertia → Piercing Stabs → repeat"
+      },
+      "image_url": "/static/images/monsters/skulkling_colomy.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Underdocks"
+    },
+    {
+      "id": "SOUL_NEXUS",
+      "name": "Soul Nexus",
+      "type": "Elite",
+      "min_hp": 234,
+      "max_hp": null,
+      "min_hp_ascension": 254,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "SOUL_BURN",
+          "name": "Soul Burn",
+          "intent": "Attack",
+          "damage": {
+            "normal": 29,
+            "ascension": 31,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "MAELSTROM",
+          "name": "Maelstrom",
+          "intent": "Attack",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": 4
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "DRAIN_LIFE",
+          "name": "Drain Life",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 18,
+            "ascension": 19,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "VULNERABLE",
+              "target": "player",
+              "amount": 2
+            },
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "SoulBurn": {
+          "normal": 29,
+          "ascension": 31,
+          "hit_count": null
+        },
+        "Maelstrom": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": 4
+        },
+        "DrainLife": {
+          "normal": 18,
+          "ascension": 19,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "SOUL_NEXUS_ELITE",
+          "encounter_name": "Soul Nexus",
+          "room_type": "Elite",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "random",
+        "initial_move": "SOUL_BURN",
+        "states": [
+          {
+            "id": "SOUL_BURN_MOVE",
+            "type": "move",
+            "move_id": "SOUL_BURN",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "MAELSTROM_MOVE",
+            "type": "move",
+            "move_id": "MAELSTROM",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "DRAIN_LIFE_MOVE",
+            "type": "move",
+            "move_id": "DRAIN_LIFE",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "SOUL_BURN",
+                "weight": 1.0,
+                "repeat": "CannotRepeat",
+                "max_times": null,
+                "condition": null
+              },
+              {
+                "move_id": "MAELSTROM",
+                "weight": 1.0,
+                "repeat": "CannotRepeat",
+                "max_times": null,
+                "condition": null
+              },
+              {
+                "move_id": "DRAIN_LIFE",
+                "weight": 1.0,
+                "repeat": "CannotRepeat",
+                "max_times": null,
+                "condition": null
+              }
+            ]
+          }
+        ],
+        "description": "Starts with Soul Burn; then random: Soul Burn (no repeat), Maelstrom (no repeat), Drain Life (no repeat)"
+      },
+      "image_url": "/static/images/monsters/soul_nexus.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "SPECTRAL_KNIGHT",
+      "name": "Spectral Knight",
+      "type": "Elite",
+      "min_hp": 93,
+      "max_hp": null,
+      "min_hp_ascension": 97,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "HEX",
+          "name": "Hex",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "HEX",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "SOUL_SLASH",
+          "name": "Soul Slash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 15,
+            "ascension": 17,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SOUL_FLAME",
+          "name": "Soul Flame",
+          "intent": "Attack",
+          "damage": {
+            "normal": 3,
+            "ascension": 4,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "SoulSlash": {
+          "normal": 15,
+          "ascension": 17,
+          "hit_count": null
+        },
+        "SoulFlame": {
+          "normal": 3,
+          "ascension": 4,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "KNIGHTS_ELITE",
+          "encounter_name": "Knight Gang",
+          "room_type": "Elite",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "random",
+        "initial_move": "HEX",
+        "states": [
+          {
+            "id": "HEX",
+            "type": "move",
+            "move_id": "HEX",
+            "must_perform_once": null,
+            "next": "SOUL_SLASH",
+            "branches": null
+          },
+          {
+            "id": "SOUL_SLASH",
+            "type": "move",
+            "move_id": "SOUL_SLASH",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "SOUL_FLAME",
+            "type": "move",
+            "move_id": "SOUL_FLAME",
+            "must_perform_once": null,
+            "next": "RAND",
+            "branches": null
+          },
+          {
+            "id": "RAND",
+            "type": "random",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          }
+        ],
+        "description": "Starts: Hex → Soul Slash"
+      },
+      "image_url": "/static/images/monsters/spectral_knight.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "TERROR_EEL",
+      "name": "Terror Eel",
+      "type": "Elite",
+      "min_hp": 140,
+      "max_hp": null,
+      "min_hp_ascension": 150,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "CRASH",
+          "name": "Crash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 16,
+            "ascension": 18,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "ThrashMove",
+          "name": "Thrashmove",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 3,
+            "ascension": 4,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "VIGOR",
+              "target": "self",
+              "amount": 6
+            }
+          ]
+        },
+        {
+          "id": "STUN",
+          "name": "Stun",
+          "intent": "Stun",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "TERROR",
+          "name": "Terror",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "VULNERABLE",
+              "target": "player",
+              "amount": 99
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Crash": {
+          "normal": 16,
+          "ascension": 18,
+          "hit_count": null
+        },
+        "Thrash": {
+          "normal": 3,
+          "ascension": 4,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "TERROR_EEL_ELITE",
+          "encounter_name": "Terror Eel",
+          "room_type": "Elite",
+          "act": "Act 1 - Underdocks",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": [
+        {
+          "power_id": "SHRIEK",
+          "amount": 70,
+          "amount_ascension": 75
+        }
+      ],
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "CRASH",
+        "states": [
+          {
+            "id": "CRASH_MOVE",
+            "type": "move",
+            "move_id": "CRASH",
+            "must_perform_once": null,
+            "next": "ThrashMove",
+            "branches": null
+          },
+          {
+            "id": "ThrashMove",
+            "type": "move",
+            "move_id": "ThrashMove",
+            "must_perform_once": null,
+            "next": "CRASH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "STUN_MOVE",
+            "type": "move",
+            "move_id": "STUN",
+            "must_perform_once": null,
+            "next": "TERROR_MOVE",
+            "branches": null
+          },
+          {
+            "id": "TERROR_MOVE",
+            "type": "move",
+            "move_id": "TERROR",
+            "must_perform_once": null,
+            "next": "CRASH_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Crash → Thrashmove → repeat"
+      },
+      "image_url": "/static/images/monsters/terror_eel.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Underdocks"
+    },
+    {
+      "id": "WRIGGLER",
+      "name": "Wriggler",
+      "type": "Elite",
+      "min_hp": 17,
+      "max_hp": 21,
+      "min_hp_ascension": 18,
+      "max_hp_ascension": 22,
+      "moves": [
+        {
+          "id": "NASTY_BITE",
+          "name": "Nasty Bite",
+          "intent": "Attack",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "WRIGGLE",
+          "name": "Wriggle",
+          "intent": "Buff + Status",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "SPAWNED",
+          "name": "Spawned",
+          "intent": "Stun",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Bite": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "DENSE_VEGETATION_EVENT_ENCOUNTER",
+          "encounter_name": "Wrigglers",
+          "room_type": "Monster",
+          "act": null,
+          "is_weak": false
+        },
+        {
+          "encounter_id": "PHROG_PARASITE_ELITE",
+          "encounter_name": "Phrog Parasite",
+          "room_type": "Elite",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "conditional",
+        "initial_move": null,
+        "states": [
+          {
+            "id": "NASTY_BITE_MOVE",
+            "type": "move",
+            "move_id": "NASTY_BITE",
+            "must_perform_once": null,
+            "next": "WRIGGLE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "WRIGGLE_MOVE",
+            "type": "move",
+            "move_id": "WRIGGLE",
+            "must_perform_once": null,
+            "next": "NASTY_BITE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SPAWNED_MOVE",
+            "type": "move",
+            "move_id": "SPAWNED",
+            "must_perform_once": null,
+            "next": "INIT_MOVE",
+            "branches": null
+          },
+          {
+            "id": "INIT_MOVE",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "NASTY_BITE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"wriggler1\""
+              },
+              {
+                "move_id": "WRIGGLE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"wriggler2\""
+              },
+              {
+                "move_id": "NASTY_BITE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"wriggler3\""
+              },
+              {
+                "move_id": "WRIGGLE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "base.Creature.SlotName == \"wriggler4\""
+              }
+            ]
+          }
+        ],
+        "description": ""
+      },
+      "image_url": "/static/images/monsters/wriggler.webp",
+      "beta_image_url": null,
+      "section": "elite",
+      "section_label": "Elite",
+      "primary_act": "Act 1 - Overgrowth"
+    }
+  ]
+}

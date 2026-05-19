@@ -1,0 +1,70 @@
+{
+  "tier": "A",
+  "note": "Per-gardener Tier A. Encounter is 4× Phantasmal Gardener with position-dependent start offset on a shared 4-move cycle. Powers omitted (Skittish, Enlarge +2 Str).",
+  "sources": {
+    "primary": "https://slaythespire2.gg/enemies/phantasmal-gardener",
+    "position_cycle": "https://sts.gg/v2/monsters/phantasmal-gardener",
+    "hp": "26-31 (A0), 27-32 (A8+)"
+  },
+  "shared_cycle": {
+    "order": ["Flail", "Enlarge", "Bite", "Lash"],
+    "intents": [
+      { "kind": "attack", "value": 3, "label": "Flail (1×3)" },
+      { "kind": "attack", "value": 0, "label": "Enlarge (+2 Str in game)" },
+      { "kind": "attack", "value": 5, "label": "Bite" },
+      { "kind": "attack", "value": 7, "label": "Lash" }
+    ]
+  },
+  "encounter": {
+    "name": "Phantasmal Gardeners",
+    "enemy_count": 4,
+    "hp_per_gardener": 29,
+    "slots": [
+      {
+        "slot": 1,
+        "start_move": "Flail",
+        "pattern_intents": [
+          { "kind": "attack", "value": 3, "label": "Flail" },
+          { "kind": "attack", "value": 0, "label": "Enlarge" },
+          { "kind": "attack", "value": 5, "label": "Bite" },
+          { "kind": "attack", "value": 7, "label": "Lash" }
+        ]
+      },
+      {
+        "slot": 2,
+        "start_move": "Bite",
+        "pattern_intents": [
+          { "kind": "attack", "value": 5, "label": "Bite" },
+          { "kind": "attack", "value": 7, "label": "Lash" },
+          { "kind": "attack", "value": 3, "label": "Flail" },
+          { "kind": "attack", "value": 0, "label": "Enlarge" }
+        ]
+      },
+      {
+        "slot": 3,
+        "start_move": "Lash",
+        "pattern_intents": [
+          { "kind": "attack", "value": 7, "label": "Lash" },
+          { "kind": "attack", "value": 3, "label": "Flail" },
+          { "kind": "attack", "value": 0, "label": "Enlarge" },
+          { "kind": "attack", "value": 5, "label": "Bite" }
+        ]
+      },
+      {
+        "slot": 4,
+        "start_move": "Enlarge",
+        "pattern_intents": [
+          { "kind": "attack", "value": 0, "label": "Enlarge" },
+          { "kind": "attack", "value": 5, "label": "Bite" },
+          { "kind": "attack", "value": 7, "label": "Lash" },
+          { "kind": "attack", "value": 3, "label": "Flail" }
+        ]
+      }
+    ]
+  },
+  "single_enemy_default": {
+    "comment": "Use slot 2 for solo sim until multi-enemy is implemented",
+    "slot": 2,
+    "hp": 29
+  }
+}

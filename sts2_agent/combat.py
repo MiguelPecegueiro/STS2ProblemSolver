@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sts2_agent.enemy_patterns import (
     assess_combat_debuff_pressure,
@@ -33,6 +36,7 @@ _hand_select_attempted: dict[str, set[int]] = {}
 
 # When False, compendium still records intents but does not steer combat (see --no-compendium).
 _compendium_decisions_enabled = True
+_combat_solver_enabled = True
 
 
 def compendium_decisions_enabled() -> bool:
@@ -42,6 +46,18 @@ def compendium_decisions_enabled() -> bool:
 def set_compendium_decisions_enabled(enabled: bool) -> None:
     global _compendium_decisions_enabled
     _compendium_decisions_enabled = enabled
+
+
+def set_combat_solver_enabled(enabled: bool) -> None:
+    global _combat_solver_enabled
+    _combat_solver_enabled = enabled
+    from sts2_agent import combat_solver
+
+    combat_solver.set_combat_solver_enabled(enabled)
+
+
+def combat_solver_enabled() -> bool:
+    return _combat_solver_enabled
 
 
 def record_training(state: dict, action: dict | None, reasoning: list[str]) -> None:
@@ -58,6 +74,10 @@ def decide_combat(state: dict) -> tuple[dict | None, list[str]]:
     battle = state.get("battle") or {}
     if battle.get("is_play_phase") is False:
         return None, ["waiting - not play phase"]
+    from sts2_agent.state_parse import is_player_combat_turn
+
+    if not is_player_combat_turn(state):
+        return None, ["waiting - not player turn"]
 
     kb = get_knowledge()
     player = state.get("player") or {}
@@ -174,6 +194,17 @@ def decide_combat(state: dict) -> tuple[dict | None, list[str]]:
     reasons.extend(pot_reasons)
     if potion_action:
         return potion_action, reasons
+
+    if _combat_solver_enabled:
+        try:
+            from sts2_agent.combat_solver import try_solver_decide
+
+            solved = try_solver_decide(state)
+            if solved is not None:
+                action, solver_reasons = solved
+                return action, reasons + solver_reasons
+        except Exception as exc:
+            logger.warning("combat solver failed, using legacy combat: %s", exc)
 
     if not playable:
         return {"action": "end_turn"}, reasons + ["no playable cards - end turn"]

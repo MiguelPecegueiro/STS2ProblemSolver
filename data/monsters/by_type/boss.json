@@ -1,0 +1,2574 @@
+{
+  "section": "boss",
+  "label": "Boss",
+  "fetched_at": "2026-05-19T20:00:40.778188+00:00",
+  "source": "https://spire-codex.com/api/monsters",
+  "count": 15,
+  "monsters": [
+    {
+      "id": "CEREMONIAL_BEAST",
+      "name": "Ceremonial Beast",
+      "type": "Boss",
+      "min_hp": 252,
+      "max_hp": null,
+      "min_hp_ascension": 262,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "STAMP",
+          "name": "Stamp",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "PLOW",
+              "target": "self",
+              "amount": 150
+            }
+          ]
+        },
+        {
+          "id": "PLOW",
+          "name": "Plow",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 18,
+            "ascension": 20,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "STUN",
+          "name": "Stun",
+          "intent": "Stun",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BEAST_CRY",
+          "name": "Beast Cry",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "RINGING",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "STOMP",
+          "name": "Stomp",
+          "intent": "Attack",
+          "damage": {
+            "normal": 15,
+            "ascension": 17,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "CRUSH",
+          "name": "Crush",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 17,
+            "ascension": 19,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Plow": {
+          "normal": 18,
+          "ascension": 20,
+          "hit_count": null
+        },
+        "Stomp": {
+          "normal": 15,
+          "ascension": 17,
+          "hit_count": null
+        },
+        "Crush": {
+          "normal": 17,
+          "ascension": 19,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "CEREMONIAL_BEAST_BOSS",
+          "encounter_name": "Ceremonial Beast",
+          "room_type": "Boss",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "STAMP",
+        "states": [
+          {
+            "id": "STAMP_MOVE",
+            "type": "move",
+            "move_id": "STAMP",
+            "must_perform_once": null,
+            "next": "PLOW_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PLOW_MOVE",
+            "type": "move",
+            "move_id": "PLOW",
+            "must_perform_once": null,
+            "next": "PLOW_MOVE",
+            "branches": null
+          },
+          {
+            "id": "STUN_MOVE",
+            "type": "move",
+            "move_id": "STUN",
+            "must_perform_once": true,
+            "next": "BEAST_CRY_MOVE",
+            "branches": null
+          },
+          {
+            "id": "STOMP_MOVE",
+            "type": "move",
+            "move_id": "STOMP",
+            "must_perform_once": null,
+            "next": "CRUSH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "CRUSH_MOVE",
+            "type": "move",
+            "move_id": "CRUSH",
+            "must_perform_once": null,
+            "next": "BEAST_CRY_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BEAST_CRY_MOVE",
+            "type": "move",
+            "move_id": "BEAST_CRY",
+            "must_perform_once": null,
+            "next": "STOMP_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Stamp → Plow → repeat"
+      },
+      "image_url": "/static/images/monsters/ceremonial_beast.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "CRUSHER",
+      "name": "Crusher",
+      "type": "Boss",
+      "min_hp": 209,
+      "max_hp": null,
+      "min_hp_ascension": 219,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "THRASH",
+          "name": "Thrash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 12,
+            "ascension": 14,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "ENLARGING_STRIKE",
+          "name": "Enlarging Strike",
+          "intent": "Attack",
+          "damage": {
+            "normal": 4,
+            "ascension": 4,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BUG_STING",
+          "name": "Bug Sting",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 2
+            },
+            {
+              "power_id": "FRAIL",
+              "target": "player",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "ADAPT",
+          "name": "Adapt",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "GUARDED_STRIKE",
+          "name": "Guarded Strike",
+          "intent": "Attack + Defend",
+          "damage": {
+            "normal": 12,
+            "ascension": 14,
+            "hit_count": null
+          },
+          "block": 18,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Thrash": {
+          "normal": 12,
+          "ascension": 14,
+          "hit_count": null
+        },
+        "EnlargingStrike": {
+          "normal": 4,
+          "ascension": 4,
+          "hit_count": null
+        },
+        "BugSting": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": 2
+        },
+        "GuardedStrike": {
+          "normal": 12,
+          "ascension": 14,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "KAISER_CRAB_BOSS",
+          "encounter_name": "Kaiser Crab",
+          "room_type": "Boss",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "THRASH",
+        "states": [
+          {
+            "id": "THRASH_MOVE",
+            "type": "move",
+            "move_id": "THRASH",
+            "must_perform_once": null,
+            "next": "ENLARGING_STRIKE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "ENLARGING_STRIKE_MOVE",
+            "type": "move",
+            "move_id": "ENLARGING_STRIKE",
+            "must_perform_once": null,
+            "next": "BUG_STING_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BUG_STING_MOVE",
+            "type": "move",
+            "move_id": "BUG_STING",
+            "must_perform_once": null,
+            "next": "ADAPT_MOVE",
+            "branches": null
+          },
+          {
+            "id": "ADAPT_MOVE",
+            "type": "move",
+            "move_id": "ADAPT",
+            "must_perform_once": null,
+            "next": "GUARDED_STRIKE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "GUARDED_STRIKE_MOVE",
+            "type": "move",
+            "move_id": "GUARDED_STRIKE",
+            "must_perform_once": null,
+            "next": "THRASH_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Thrash → Enlarging Strike → Bug Sting → Adapt → Guarded Strike → repeat"
+      },
+      "image_url": "/static/images/monsters/crusher.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "DOORMAKER",
+      "name": "Doormaker",
+      "type": "Boss",
+      "min_hp": 489,
+      "max_hp": null,
+      "min_hp_ascension": 512,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "DRAMATIC_OPEN",
+          "name": "Dramatic Open",
+          "intent": "Summon",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "HUNGER",
+          "name": "Hunger",
+          "intent": "Attack",
+          "damage": {
+            "normal": 30,
+            "ascension": 35,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SCRUTINY",
+          "name": "Scrutiny",
+          "intent": "Attack",
+          "damage": {
+            "normal": 24,
+            "ascension": 26,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "GRASP",
+          "name": "Grasp",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 10,
+            "ascension": 11,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Hunger": {
+          "normal": 30,
+          "ascension": 35,
+          "hit_count": null
+        },
+        "Scrutiny": {
+          "normal": 24,
+          "ascension": 26,
+          "hit_count": null
+        },
+        "Grasp": {
+          "normal": 10,
+          "ascension": 11,
+          "hit_count": 2
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "DOORMAKER_BOSS",
+          "encounter_name": "The Doormaker",
+          "room_type": "Boss",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "DRAMATIC_OPEN",
+        "states": [
+          {
+            "id": "DRAMATIC_OPEN_MOVE",
+            "type": "move",
+            "move_id": "DRAMATIC_OPEN",
+            "must_perform_once": null,
+            "next": "HUNGER_MOVE",
+            "branches": null
+          },
+          {
+            "id": "HUNGER_MOVE",
+            "type": "move",
+            "move_id": "HUNGER",
+            "must_perform_once": null,
+            "next": "SCRUTINY_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SCRUTINY_MOVE",
+            "type": "move",
+            "move_id": "SCRUTINY",
+            "must_perform_once": null,
+            "next": "GRASP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "GRASP_MOVE",
+            "type": "move",
+            "move_id": "GRASP",
+            "must_perform_once": null,
+            "next": "HUNGER_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Dramatic Open → Hunger → Scrutiny → Grasp → repeat"
+      },
+      "image_url": "/static/images/monsters/doormaker.webp",
+      "beta_image_url": "/static/images/monsters/beta/door_maker_placeholder_2.webp",
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "KIN_FOLLOWER",
+      "name": "Kin Follower",
+      "type": "Boss",
+      "min_hp": 58,
+      "max_hp": 59,
+      "min_hp_ascension": 62,
+      "max_hp_ascension": 63,
+      "moves": [
+        {
+          "id": "QUICK_SLASH",
+          "name": "Quick Slash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 5,
+            "ascension": 5,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BOOMERANG",
+          "name": "Boomerang",
+          "intent": "Attack",
+          "damage": {
+            "normal": 2,
+            "ascension": 2,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "POWER_DANCE",
+          "name": "Power Dance",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "QuickSlash": {
+          "normal": 5,
+          "ascension": 5,
+          "hit_count": null
+        },
+        "Boomerang": {
+          "normal": 2,
+          "ascension": 2,
+          "hit_count": 2
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "THE_KIN_BOSS",
+          "encounter_name": "The Kin",
+          "room_type": "Boss",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "POWER_DANCE",
+        "states": [
+          {
+            "id": "QUICK_SLASH_MOVE",
+            "type": "move",
+            "move_id": "QUICK_SLASH",
+            "must_perform_once": null,
+            "next": "BOOMERANG_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BOOMERANG_MOVE",
+            "type": "move",
+            "move_id": "BOOMERANG",
+            "must_perform_once": null,
+            "next": "POWER_DANCE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "POWER_DANCE_MOVE",
+            "type": "move",
+            "move_id": "POWER_DANCE",
+            "must_perform_once": null,
+            "next": "QUICK_SLASH_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Power Dance → Quick Slash → Boomerang → repeat"
+      },
+      "image_url": "/static/images/monsters/kin_follower.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "KIN_PRIEST",
+      "name": "Kin Priest",
+      "type": "Boss",
+      "min_hp": 190,
+      "max_hp": null,
+      "min_hp_ascension": 199,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "ORB_OF_FRAILTY",
+          "name": "Orb Of Frailty",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "FRAIL",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "ORB_OF_WEAKNESS",
+          "name": "Orb Of Weakness",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "BEAM",
+          "name": "Beam",
+          "intent": "Attack",
+          "damage": {
+            "normal": 3,
+            "ascension": 3,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "RITUAL",
+          "name": "Ritual",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "OrbOfFrailty": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": null
+        },
+        "OrbOfWeakness": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": null
+        },
+        "Beam": {
+          "normal": 3,
+          "ascension": 3,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "THE_KIN_BOSS",
+          "encounter_name": "The Kin",
+          "room_type": "Boss",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "ORB_OF_FRAILTY",
+        "states": [
+          {
+            "id": "ORB_OF_FRAILTY_MOVE",
+            "type": "move",
+            "move_id": "ORB_OF_FRAILTY",
+            "must_perform_once": null,
+            "next": "ORB_OF_WEAKNESS_MOVE",
+            "branches": null
+          },
+          {
+            "id": "ORB_OF_WEAKNESS_MOVE",
+            "type": "move",
+            "move_id": "ORB_OF_WEAKNESS",
+            "must_perform_once": null,
+            "next": "BEAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BEAM_MOVE",
+            "type": "move",
+            "move_id": "BEAM",
+            "must_perform_once": null,
+            "next": "RITUAL_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RITUAL_MOVE",
+            "type": "move",
+            "move_id": "RITUAL",
+            "must_perform_once": null,
+            "next": "ORB_OF_FRAILTY_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Orb Of Frailty → Orb Of Weakness → Beam → Ritual → repeat"
+      },
+      "image_url": "/static/images/monsters/kin_priest.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "KNOWLEDGE_DEMON",
+      "name": "Knowledge Demon",
+      "type": "Boss",
+      "min_hp": 379,
+      "max_hp": null,
+      "min_hp_ascension": 399,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "CURSE_OF_KNOWLEDGE",
+          "name": "Curse of Knowledge",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SLAP",
+          "name": "Slap",
+          "intent": "Attack",
+          "damage": {
+            "normal": 17,
+            "ascension": 18,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "KNOWLEDGE_OVERWHELMING",
+          "name": "Knowledge Overwhelming",
+          "intent": "Attack",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "PONDER",
+          "name": "Ponder",
+          "intent": "Attack + Heal + Buff",
+          "damage": {
+            "normal": 11,
+            "ascension": 13,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": 30,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Slap": {
+          "normal": 17,
+          "ascension": 18,
+          "hit_count": null
+        },
+        "Ponder": {
+          "normal": 11,
+          "ascension": 13,
+          "hit_count": null
+        },
+        "KnowledgeOverwhelming": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "KNOWLEDGE_DEMON_BOSS",
+          "encounter_name": "Knowledge Demon",
+          "room_type": "Boss",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "conditional",
+        "initial_move": "CURSE_OF_KNOWLEDGE",
+        "states": [
+          {
+            "id": "CURSE_OF_KNOWLEDGE_MOVE",
+            "type": "move",
+            "move_id": "CURSE_OF_KNOWLEDGE",
+            "must_perform_once": null,
+            "next": "SLAP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SLAP_MOVE",
+            "type": "move",
+            "move_id": "SLAP",
+            "must_perform_once": null,
+            "next": "KNOWLEDGE_OVERWHELMING_MOVE",
+            "branches": null
+          },
+          {
+            "id": "KNOWLEDGE_OVERWHELMING_MOVE",
+            "type": "move",
+            "move_id": "KNOWLEDGE_OVERWHELMING",
+            "must_perform_once": null,
+            "next": "PONDER_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PONDER_MOVE",
+            "type": "move",
+            "move_id": "PONDER",
+            "must_perform_once": null,
+            "next": "CurseOfKnowledgeBranch",
+            "branches": null
+          },
+          {
+            "id": "CurseOfKnowledgeBranch",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "CURSE_OF_KNOWLEDGE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "_curseOfKnowledgeCounter < 3"
+              },
+              {
+                "move_id": "SLAP",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "_curseOfKnowledgeCounter >= 3"
+              }
+            ]
+          }
+        ],
+        "description": "Starts: Curse of Knowledge → Slap → Knowledge Overwhelming → Ponder; then conditional: Curse of Knowledge (if curse of knowledge counter < 3) / Slap (if curse of knowledge counter >= 3)"
+      },
+      "image_url": "/static/images/monsters/knowledge_demon.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "LAGAVULIN_MATRIARCH",
+      "name": "Lagavulin Matriarch",
+      "type": "Boss",
+      "min_hp": 222,
+      "max_hp": null,
+      "min_hp_ascension": 233,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "SLEEP",
+          "name": "Sleep",
+          "intent": "Sleep",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SLASH",
+          "name": "Slash",
+          "intent": "Attack",
+          "damage": {
+            "normal": 19,
+            "ascension": 21,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SLASH2",
+          "name": "Slash2",
+          "intent": "Attack + Defend",
+          "damage": {
+            "normal": 12,
+            "ascension": 14,
+            "hit_count": null
+          },
+          "block": 12,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "DISEMBOWEL",
+          "name": "Disembowel",
+          "intent": "Attack",
+          "damage": {
+            "normal": 9,
+            "ascension": 10,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SOUL_SIPHON",
+          "name": "Soul Siphon",
+          "intent": "Debuff + Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Slash": {
+          "normal": 19,
+          "ascension": 21,
+          "hit_count": null
+        },
+        "Slash2": {
+          "normal": 12,
+          "ascension": 14,
+          "hit_count": null
+        },
+        "Disembowel": {
+          "normal": 9,
+          "ascension": 10,
+          "hit_count": 2
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "LAGAVULIN_MATRIARCH_BOSS",
+          "encounter_name": "Lagavulin Matriarch",
+          "room_type": "Boss",
+          "act": "Act 1 - Underdocks",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "conditional",
+        "initial_move": "SLEEP",
+        "states": [
+          {
+            "id": "SLEEP_MOVE",
+            "type": "move",
+            "move_id": "SLEEP",
+            "must_perform_once": null,
+            "next": null,
+            "branches": null
+          },
+          {
+            "id": "SLASH_MOVE",
+            "type": "move",
+            "move_id": "SLASH",
+            "must_perform_once": null,
+            "next": "DISEMBOWEL_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SLASH2_MOVE",
+            "type": "move",
+            "move_id": "SLASH2",
+            "must_perform_once": null,
+            "next": "SOUL_SIPHON_MOVE",
+            "branches": null
+          },
+          {
+            "id": "DISEMBOWEL_MOVE",
+            "type": "move",
+            "move_id": "DISEMBOWEL",
+            "must_perform_once": null,
+            "next": "SLASH2_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SOUL_SIPHON_MOVE",
+            "type": "move",
+            "move_id": "SOUL_SIPHON",
+            "must_perform_once": null,
+            "next": "SLASH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SLEEP_BRANCH",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": []
+          }
+        ],
+        "description": "Starts with Sleep"
+      },
+      "image_url": "/static/images/monsters/lagavulin_matriarch.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Underdocks"
+    },
+    {
+      "id": "QUEEN",
+      "name": "Queen",
+      "type": "Boss",
+      "min_hp": 400,
+      "max_hp": null,
+      "min_hp_ascension": 419,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "PUPPET_STRINGS",
+          "name": "Puppet Strings",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "CHAINS_OF_BINDING",
+              "target": "player",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "YOUR_MINE",
+          "name": "Your Mine",
+          "intent": "Debuff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "FRAIL",
+              "target": "player",
+              "amount": 99
+            },
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 99
+            },
+            {
+              "power_id": "VULNERABLE",
+              "target": "player",
+              "amount": 99
+            }
+          ]
+        },
+        {
+          "id": "BURN_BRIGHT_FOR_ME",
+          "name": "Burn Bright for Me",
+          "intent": "Buff + Defend",
+          "damage": null,
+          "block": 20,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "OFF_WITH_YOUR_HEAD",
+          "name": "Off with Your Head",
+          "intent": "Attack",
+          "damage": {
+            "normal": 3,
+            "ascension": 4,
+            "hit_count": 5
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "EXECUTION",
+          "name": "Execution",
+          "intent": "Attack",
+          "damage": {
+            "normal": 15,
+            "ascension": 18,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "ENRAGE",
+          "name": "Enrage",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "OffWithYourHead": {
+          "normal": 3,
+          "ascension": 4,
+          "hit_count": 5
+        },
+        "Execution": {
+          "normal": 15,
+          "ascension": 18,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "QUEEN_BOSS",
+          "encounter_name": "Queen",
+          "room_type": "Boss",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "conditional",
+        "initial_move": "PUPPET_STRINGS",
+        "states": [
+          {
+            "id": "PUPPET_STRINGS_MOVE",
+            "type": "move",
+            "move_id": "PUPPET_STRINGS",
+            "must_perform_once": null,
+            "next": "YOUR_MINE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "YOUR_MINE_MOVE",
+            "type": "move",
+            "move_id": "YOUR_MINE",
+            "must_perform_once": null,
+            "next": "YOURE_MINE_NOW_BRANCH",
+            "branches": null
+          },
+          {
+            "id": "OFF_WITH_YOUR_HEAD_MOVE",
+            "type": "move",
+            "move_id": "OFF_WITH_YOUR_HEAD",
+            "must_perform_once": null,
+            "next": "EXECUTION_MOVE",
+            "branches": null
+          },
+          {
+            "id": "EXECUTION_MOVE",
+            "type": "move",
+            "move_id": "EXECUTION",
+            "must_perform_once": null,
+            "next": "ENRAGE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BURN_BRIGHT_FOR_ME_MOVE",
+            "type": "move",
+            "move_id": "BURN_BRIGHT_FOR_ME",
+            "must_perform_once": null,
+            "next": "BURN_BRIGHT_FOR_ME_BRANCH",
+            "branches": null
+          },
+          {
+            "id": "ENRAGE_MOVE",
+            "type": "move",
+            "move_id": "ENRAGE",
+            "must_perform_once": null,
+            "next": "OFF_WITH_YOUR_HEAD_MOVE",
+            "branches": null
+          },
+          {
+            "id": "YOURE_MINE_NOW_BRANCH",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "BURN_BRIGHT_FOR_ME",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "!HasAmalgamDied"
+              },
+              {
+                "move_id": "OFF_WITH_YOUR_HEAD",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "HasAmalgamDied"
+              }
+            ]
+          },
+          {
+            "id": "BURN_BRIGHT_FOR_ME_BRANCH",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "BURN_BRIGHT_FOR_ME",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "!HasAmalgamDied"
+              },
+              {
+                "move_id": "OFF_WITH_YOUR_HEAD",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "HasAmalgamDied"
+              }
+            ]
+          }
+        ],
+        "description": "Starts: Puppet Strings → Your Mine; then conditional: Burn Bright for Me (if does not have amalgam died) / Off with Your Head (if has amalgam died); then conditional: Burn Bright for Me (if does not have amalgam died) / Off with Your Head (if has amalgam died)"
+      },
+      "image_url": "/static/images/monsters/queen.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "ROCKET",
+      "name": "Rocket",
+      "type": "Boss",
+      "min_hp": 199,
+      "max_hp": null,
+      "min_hp_ascension": 209,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "TARGETING_RETICLE",
+          "name": "Targeting Reticle",
+          "intent": "Attack",
+          "damage": {
+            "normal": 3,
+            "ascension": 4,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "PRECISION_BEAM",
+          "name": "Precision Beam",
+          "intent": "Attack",
+          "damage": {
+            "normal": 18,
+            "ascension": 20,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "CHARGE_UP",
+          "name": "Charge Up",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "LASER",
+          "name": "Laser",
+          "intent": "Attack",
+          "damage": {
+            "normal": 31,
+            "ascension": 35,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "RECHARGE",
+          "name": "Recharge",
+          "intent": "Sleep",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "TargetingReticle": {
+          "normal": 3,
+          "ascension": 4,
+          "hit_count": null
+        },
+        "PrecisionBeam": {
+          "normal": 18,
+          "ascension": 20,
+          "hit_count": null
+        },
+        "Laser": {
+          "normal": 31,
+          "ascension": 35,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "KAISER_CRAB_BOSS",
+          "encounter_name": "Kaiser Crab",
+          "room_type": "Boss",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "TARGETING_RETICLE",
+        "states": [
+          {
+            "id": "TARGETING_RETICLE_MOVE",
+            "type": "move",
+            "move_id": "TARGETING_RETICLE",
+            "must_perform_once": null,
+            "next": "PRECISION_BEAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PRECISION_BEAM_MOVE",
+            "type": "move",
+            "move_id": "PRECISION_BEAM",
+            "must_perform_once": null,
+            "next": "CHARGE_UP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "CHARGE_UP_MOVE",
+            "type": "move",
+            "move_id": "CHARGE_UP",
+            "must_perform_once": null,
+            "next": "LASER_MOVE",
+            "branches": null
+          },
+          {
+            "id": "LASER_MOVE",
+            "type": "move",
+            "move_id": "LASER",
+            "must_perform_once": null,
+            "next": "RECHARGE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RECHARGE_MOVE",
+            "type": "move",
+            "move_id": "RECHARGE",
+            "must_perform_once": null,
+            "next": "TARGETING_RETICLE_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Targeting Reticle → Precision Beam → Charge Up → Laser → Recharge → repeat"
+      },
+      "image_url": "/static/images/monsters/rocket.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "SOUL_FYSH",
+      "name": "Soul Fysh",
+      "type": "Boss",
+      "min_hp": 211,
+      "max_hp": null,
+      "min_hp_ascension": 221,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "BECKON",
+          "name": "Beckon",
+          "intent": "Status",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "DE_GAS",
+          "name": "De-Gas",
+          "intent": "Attack",
+          "damage": {
+            "normal": 16,
+            "ascension": 17,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "GAZE",
+          "name": "Gaze",
+          "intent": "Attack + Status",
+          "damage": {
+            "normal": 7,
+            "ascension": 8,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "FADE",
+          "name": "Fade",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "INTANGIBLE",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        },
+        {
+          "id": "SCREAM",
+          "name": "Scream",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 11,
+            "ascension": 12,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "VULNERABLE",
+              "target": "player",
+              "amount": 3
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "DeGas": {
+          "normal": 16,
+          "ascension": 17,
+          "hit_count": null
+        },
+        "Scream": {
+          "normal": 11,
+          "ascension": 12,
+          "hit_count": null
+        },
+        "Gaze": {
+          "normal": 7,
+          "ascension": 8,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "SOUL_FYSH_BOSS",
+          "encounter_name": "Soul Fysh",
+          "room_type": "Boss",
+          "act": "Act 1 - Underdocks",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "BECKON",
+        "states": [
+          {
+            "id": "BECKON_MOVE",
+            "type": "move",
+            "move_id": "BECKON",
+            "must_perform_once": null,
+            "next": "DE_GAS_MOVE",
+            "branches": null
+          },
+          {
+            "id": "DE_GAS_MOVE",
+            "type": "move",
+            "move_id": "DE_GAS",
+            "must_perform_once": null,
+            "next": "GAZE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "GAZE_MOVE",
+            "type": "move",
+            "move_id": "GAZE",
+            "must_perform_once": null,
+            "next": "FADE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "FADE_MOVE",
+            "type": "move",
+            "move_id": "FADE",
+            "must_perform_once": null,
+            "next": "SCREAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SCREAM_MOVE",
+            "type": "move",
+            "move_id": "SCREAM",
+            "must_perform_once": null,
+            "next": "BECKON_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Beckon → De-Gas → Gaze → Fade → Scream → repeat"
+      },
+      "image_url": "/static/images/monsters/soul_fysh.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Underdocks"
+    },
+    {
+      "id": "TEST_SUBJECT",
+      "name": "Test Subject #C14",
+      "type": "Boss",
+      "min_hp": null,
+      "max_hp": null,
+      "min_hp_ascension": null,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "RESPAWN",
+          "name": "Respawn",
+          "intent": "Heal + Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "PAINFUL_STABS",
+              "target": "self",
+              "amount": 1
+            },
+            {
+              "power_id": "NEMESIS",
+              "target": "self",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "BITE",
+          "name": "Bite",
+          "intent": "Attack",
+          "damage": {
+            "normal": 20,
+            "ascension": 22,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SKULL_BASH",
+          "name": "Skull Bash",
+          "intent": "Attack + Debuff",
+          "damage": {
+            "normal": 14,
+            "ascension": 16,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "VULNERABLE",
+              "target": "player",
+              "amount": 1
+            }
+          ]
+        },
+        {
+          "id": "MULTI_CLAW",
+          "name": "Multi Claw",
+          "intent": "Attack",
+          "damage": {
+            "normal": 10,
+            "ascension": 11,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "PHASE3_LACERATE",
+          "name": "Phase3 Lacerate",
+          "intent": "Attack",
+          "damage": {
+            "normal": 10,
+            "ascension": 11,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BIG_POUNCE",
+          "name": "Big Pounce",
+          "intent": "Attack",
+          "damage": {
+            "normal": 45,
+            "ascension": null,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BURNING_GROWL",
+          "name": "Burning Growl",
+          "intent": "Status + Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Bite": {
+          "normal": 20,
+          "ascension": 22,
+          "hit_count": null
+        },
+        "SkullBash": {
+          "normal": 14,
+          "ascension": 16,
+          "hit_count": null
+        },
+        "MultiClaw": {
+          "normal": 10,
+          "ascension": 11,
+          "hit_count": null
+        },
+        "Phase3Lacerate": {
+          "normal": 10,
+          "ascension": 11,
+          "hit_count": 3
+        },
+        "BigPounce": {
+          "normal": 45,
+          "ascension": null,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "TEST_SUBJECT_BOSS",
+          "encounter_name": "Test Subject",
+          "room_type": "Boss",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": [
+        {
+          "power_id": "ENRAGE",
+          "amount": 2,
+          "amount_ascension": 3
+        }
+      ],
+      "attack_pattern": {
+        "type": "conditional",
+        "initial_move": "BITE",
+        "states": [
+          {
+            "id": "BITE_MOVE",
+            "type": "move",
+            "move_id": "BITE",
+            "must_perform_once": null,
+            "next": "SKULL_BASH_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SKULL_BASH_MOVE",
+            "type": "move",
+            "move_id": "SKULL_BASH",
+            "must_perform_once": null,
+            "next": "BITE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "MULTI_CLAW_MOVE",
+            "type": "move",
+            "move_id": "MULTI_CLAW",
+            "must_perform_once": null,
+            "next": "MULTI_CLAW_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PHASE3_LACERATE_MOVE",
+            "type": "move",
+            "move_id": "PHASE3_LACERATE",
+            "must_perform_once": null,
+            "next": "BIG_POUNCE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BIG_POUNCE_MOVE",
+            "type": "move",
+            "move_id": "BIG_POUNCE",
+            "must_perform_once": null,
+            "next": "BURNING_GROWL_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BURNING_GROWL_MOVE",
+            "type": "move",
+            "move_id": "BURNING_GROWL",
+            "must_perform_once": null,
+            "next": "PHASE3_LACERATE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RESPAWN_MOVE",
+            "type": "move",
+            "move_id": "RESPAWN",
+            "must_perform_once": true,
+            "next": "REVIVE_BRANCH",
+            "branches": null
+          },
+          {
+            "id": "REVIVE_BRANCH",
+            "type": "conditional",
+            "move_id": null,
+            "must_perform_once": null,
+            "next": null,
+            "branches": [
+              {
+                "move_id": "MULTI_CLAW",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "Respawns < 2"
+              },
+              {
+                "move_id": "PHASE3_LACERATE",
+                "weight": null,
+                "repeat": null,
+                "max_times": null,
+                "condition": "Respawns >= 2"
+              }
+            ]
+          }
+        ],
+        "description": "Starts: Bite → Skull Bash; then conditional: Multi Claw (if respawns < 2) / Phase3 Lacerate (if respawns >= 2)"
+      },
+      "image_url": "/static/images/monsters/test_subject.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "THE_INSATIABLE",
+      "name": "The Insatiable",
+      "type": "Boss",
+      "min_hp": 321,
+      "max_hp": null,
+      "min_hp_ascension": 341,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "LIQUIFY_GROUND",
+          "name": "Liquify Ground",
+          "intent": "Buff + Status",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "THRASH_MOVE_1",
+          "name": "Thrash Move 1",
+          "intent": "Attack",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "THRASH_MOVE_2",
+          "name": "Thrash Move 2",
+          "intent": "Attack",
+          "damage": {
+            "normal": 8,
+            "ascension": 9,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "LUNGING_BITE",
+          "name": "Lunging Bite",
+          "intent": "Attack",
+          "damage": {
+            "normal": 28,
+            "ascension": 31,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "SALIVATE",
+          "name": "Salivate",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "Thrash": {
+          "normal": 8,
+          "ascension": 9,
+          "hit_count": 2
+        },
+        "Bite": {
+          "normal": 28,
+          "ascension": 31,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "THE_INSATIABLE_BOSS",
+          "encounter_name": "The Insatiable",
+          "room_type": "Boss",
+          "act": "Act 2 - Hive",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "LIQUIFY_GROUND",
+        "states": [
+          {
+            "id": "LIQUIFY_GROUND_MOVE",
+            "type": "move",
+            "move_id": "LIQUIFY_GROUND",
+            "must_perform_once": null,
+            "next": "THRASH_MOVE_1",
+            "branches": null
+          },
+          {
+            "id": "THRASH_MOVE_1",
+            "type": "move",
+            "move_id": "THRASH_MOVE_1",
+            "must_perform_once": null,
+            "next": "LUNGING_BITE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "THRASH_MOVE_2",
+            "type": "move",
+            "move_id": "THRASH_MOVE_2",
+            "must_perform_once": null,
+            "next": "THRASH_MOVE_1",
+            "branches": null
+          },
+          {
+            "id": "LUNGING_BITE_MOVE",
+            "type": "move",
+            "move_id": "LUNGING_BITE",
+            "must_perform_once": null,
+            "next": "SALIVATE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SALIVATE_MOVE",
+            "type": "move",
+            "move_id": "SALIVATE",
+            "must_perform_once": null,
+            "next": "THRASH_MOVE_2",
+            "branches": null
+          }
+        ],
+        "description": "Liquify Ground → Thrash Move 1 → Lunging Bite → Salivate → Thrash Move 2 → repeat"
+      },
+      "image_url": "/static/images/monsters/the_insatiable.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 2 - Hive"
+    },
+    {
+      "id": "TORCH_HEAD_AMALGAM",
+      "name": "Torch Head Amalgam",
+      "type": "Boss",
+      "min_hp": 199,
+      "max_hp": null,
+      "min_hp_ascension": 211,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "TACKLE_1",
+          "name": "Tackle 1",
+          "intent": "Attack",
+          "damage": {
+            "normal": 18,
+            "ascension": 19,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "TACKLE_2",
+          "name": "Tackle 2",
+          "intent": "Attack",
+          "damage": {
+            "normal": 18,
+            "ascension": 19,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "BEAM",
+          "name": "Beam",
+          "intent": "Attack",
+          "damage": {
+            "normal": 8,
+            "ascension": 8,
+            "hit_count": 3
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "TACKLE_3",
+          "name": "Tackle 3",
+          "intent": "Attack",
+          "damage": {
+            "normal": 14,
+            "ascension": 15,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "TACKLE_4",
+          "name": "Tackle 4",
+          "intent": "Attack",
+          "damage": {
+            "normal": 14,
+            "ascension": 15,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Tackle": {
+          "normal": 18,
+          "ascension": 19,
+          "hit_count": null
+        },
+        "WeakTackle": {
+          "normal": 14,
+          "ascension": 15,
+          "hit_count": null
+        },
+        "SoulBeam": {
+          "normal": 8,
+          "ascension": 8,
+          "hit_count": 3
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "QUEEN_BOSS",
+          "encounter_name": "Queen",
+          "room_type": "Boss",
+          "act": "Act 3 - Glory",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "TACKLE_1",
+        "states": [
+          {
+            "id": "TACKLE_1_MOVE",
+            "type": "move",
+            "move_id": "TACKLE_1",
+            "must_perform_once": null,
+            "next": "TACKLE_2_MOVE",
+            "branches": null
+          },
+          {
+            "id": "TACKLE_2_MOVE",
+            "type": "move",
+            "move_id": "TACKLE_2",
+            "must_perform_once": null,
+            "next": "BEAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "BEAM_MOVE",
+            "type": "move",
+            "move_id": "BEAM",
+            "must_perform_once": null,
+            "next": "TACKLE_3_MOVE",
+            "branches": null
+          },
+          {
+            "id": "TACKLE_3_MOVE",
+            "type": "move",
+            "move_id": "TACKLE_3",
+            "must_perform_once": null,
+            "next": "TACKLE_4_MOVE",
+            "branches": null
+          },
+          {
+            "id": "TACKLE_4_MOVE",
+            "type": "move",
+            "move_id": "TACKLE_4",
+            "must_perform_once": null,
+            "next": "BEAM_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Tackle 1 → Tackle 2 → Beam → Tackle 3 → Tackle 4 → repeat"
+      },
+      "image_url": "/static/images/monsters/amalgam.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 3 - Glory"
+    },
+    {
+      "id": "VANTOM",
+      "name": "Vantom",
+      "type": "Boss",
+      "min_hp": 173,
+      "max_hp": null,
+      "min_hp_ascension": 183,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "INK_BLOT",
+          "name": "Ink Blot",
+          "intent": "Attack",
+          "damage": {
+            "normal": 7,
+            "ascension": 8,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "INKY_LANCE",
+          "name": "Inky Lance",
+          "intent": "Attack",
+          "damage": {
+            "normal": 6,
+            "ascension": 7,
+            "hit_count": 2
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "DISMEMBER",
+          "name": "Dismember",
+          "intent": "Attack + Status",
+          "damage": {
+            "normal": 27,
+            "ascension": 30,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "PREPARE",
+          "name": "Prepare",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STRENGTH",
+              "target": "self",
+              "amount": 2
+            }
+          ]
+        }
+      ],
+      "damage_values": {
+        "InkBlot": {
+          "normal": 7,
+          "ascension": 8,
+          "hit_count": null
+        },
+        "InkyLance": {
+          "normal": 6,
+          "ascension": 7,
+          "hit_count": 2
+        },
+        "Dismember": {
+          "normal": 27,
+          "ascension": 30,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "VANTOM_BOSS",
+          "encounter_name": "Vantom",
+          "room_type": "Boss",
+          "act": "Act 1 - Overgrowth",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "INK_BLOT",
+        "states": [
+          {
+            "id": "INK_BLOT_MOVE",
+            "type": "move",
+            "move_id": "INK_BLOT",
+            "must_perform_once": null,
+            "next": "INKY_LANCE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "INKY_LANCE_MOVE",
+            "type": "move",
+            "move_id": "INKY_LANCE",
+            "must_perform_once": null,
+            "next": "DISMEMBER_MOVE",
+            "branches": null
+          },
+          {
+            "id": "DISMEMBER_MOVE",
+            "type": "move",
+            "move_id": "DISMEMBER",
+            "must_perform_once": null,
+            "next": "PREPARE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PREPARE_MOVE",
+            "type": "move",
+            "move_id": "PREPARE",
+            "must_perform_once": null,
+            "next": "INK_BLOT_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Ink Blot → Inky Lance → Dismember → Prepare → repeat"
+      },
+      "image_url": "/static/images/monsters/vantom.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Overgrowth"
+    },
+    {
+      "id": "WATERFALL_GIANT",
+      "name": "Waterfall Giant",
+      "type": "Boss",
+      "min_hp": 240,
+      "max_hp": null,
+      "min_hp_ascension": 250,
+      "max_hp_ascension": null,
+      "moves": [
+        {
+          "id": "PRESSURIZE",
+          "name": "Pressurize",
+          "intent": "Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STEAM_ERUPTION",
+              "target": "self",
+              "amount": 15
+            }
+          ]
+        },
+        {
+          "id": "STOMP",
+          "name": "Stomp",
+          "intent": "Attack + Debuff + Buff",
+          "damage": {
+            "normal": 15,
+            "ascension": 16,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "WEAK",
+              "target": "player",
+              "amount": 1
+            },
+            {
+              "power_id": "STEAM_ERUPTION",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "RAM",
+          "name": "Ram",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 10,
+            "ascension": 11,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STEAM_ERUPTION",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "SIPHON",
+          "name": "Siphon",
+          "intent": "Heal + Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STEAM_ERUPTION",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "PRESSURE_GUN",
+          "name": "Pressure Gun",
+          "intent": "Attack + Buff",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STEAM_ERUPTION",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "PRESSURE_UP",
+          "name": "Pressure Up",
+          "intent": "Attack + Buff",
+          "damage": {
+            "normal": 13,
+            "ascension": 14,
+            "hit_count": null
+          },
+          "block": null,
+          "heal": null,
+          "powers": [
+            {
+              "power_id": "STEAM_ERUPTION",
+              "target": "self",
+              "amount": 3
+            }
+          ]
+        },
+        {
+          "id": "ABOUT_TO_BLOW",
+          "name": "About To Blow",
+          "intent": "Stun",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        },
+        {
+          "id": "EXPLODE",
+          "name": "Explode",
+          "intent": "Special",
+          "damage": null,
+          "block": null,
+          "heal": null,
+          "powers": null
+        }
+      ],
+      "damage_values": {
+        "Stomp": {
+          "normal": 15,
+          "ascension": 16,
+          "hit_count": null
+        },
+        "Ram": {
+          "normal": 10,
+          "ascension": 11,
+          "hit_count": null
+        },
+        "PressureUp": {
+          "normal": 13,
+          "ascension": 14,
+          "hit_count": null
+        },
+        "BasePressureGun": {
+          "normal": 20,
+          "ascension": 23,
+          "hit_count": null
+        }
+      },
+      "block_values": null,
+      "encounters": [
+        {
+          "encounter_id": "WATERFALL_GIANT_BOSS",
+          "encounter_name": "Waterfall Giant",
+          "room_type": "Boss",
+          "act": "Act 1 - Underdocks",
+          "is_weak": false
+        }
+      ],
+      "innate_powers": null,
+      "attack_pattern": {
+        "type": "cycle",
+        "initial_move": "PRESSURIZE",
+        "states": [
+          {
+            "id": "PRESSURIZE_MOVE",
+            "type": "move",
+            "move_id": "PRESSURIZE",
+            "must_perform_once": null,
+            "next": "STOMP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "STOMP_MOVE",
+            "type": "move",
+            "move_id": "STOMP",
+            "must_perform_once": null,
+            "next": "RAM_MOVE",
+            "branches": null
+          },
+          {
+            "id": "RAM_MOVE",
+            "type": "move",
+            "move_id": "RAM",
+            "must_perform_once": null,
+            "next": "SIPHON_MOVE",
+            "branches": null
+          },
+          {
+            "id": "SIPHON_MOVE",
+            "type": "move",
+            "move_id": "SIPHON",
+            "must_perform_once": null,
+            "next": "PRESSURE_GUN_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PRESSURE_GUN_MOVE",
+            "type": "move",
+            "move_id": "PRESSURE_GUN",
+            "must_perform_once": null,
+            "next": "PRESSURE_UP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "PRESSURE_UP_MOVE",
+            "type": "move",
+            "move_id": "PRESSURE_UP",
+            "must_perform_once": null,
+            "next": "STOMP_MOVE",
+            "branches": null
+          },
+          {
+            "id": "EXPLODE_MOVE",
+            "type": "move",
+            "move_id": "EXPLODE",
+            "must_perform_once": null,
+            "next": "EXPLODE_MOVE",
+            "branches": null
+          },
+          {
+            "id": "ABOUT_TO_BLOW_MOVE",
+            "type": "move",
+            "move_id": "ABOUT_TO_BLOW",
+            "must_perform_once": true,
+            "next": "EXPLODE_MOVE",
+            "branches": null
+          }
+        ],
+        "description": "Pressurize → Stomp → Ram → Siphon → Pressure Gun → Pressure Up → repeat"
+      },
+      "image_url": "/static/images/monsters/waterfall_giant.webp",
+      "beta_image_url": null,
+      "section": "boss",
+      "section_label": "Boss",
+      "primary_act": "Act 1 - Underdocks"
+    }
+  ]
+}

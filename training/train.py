@@ -265,6 +265,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--val-fraction", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument(
+        "--no-clean-only",
+        action="store_true",
+        help="Include agent decisions without Phase B combat_summary (default: human + Phase B agent only)",
+    )
     return parser.parse_args()
 
 
@@ -283,7 +288,7 @@ def main() -> int:
         val_fraction=args.val_fraction,
         seed=args.seed,
         device_name=args.device,
-        clean_only=args.clean_only,
+        clean_only=not args.no_clean_only,
     )
     return 0
 

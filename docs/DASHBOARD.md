@@ -15,7 +15,9 @@ streamlit run dashboard/app.py
 | Tab | Purpose |
 |-----|---------|
 | **Run analytics** | Phase A metrics (four sections below) |
-| **Enemy compendium** | Unchanged — browse/edit learned enemy data |
+| **Run Explorer** | Browse individual runs and decisions |
+| **Enemy compendium** | Browse Spire Codex monsters from `data/monsters/` by type; view moves, patterns, exact JSON |
+| **Card compendium** | Browse Spire Codex cards from `data/cards/` by color; view exact JSON per card |
 
 ---
 

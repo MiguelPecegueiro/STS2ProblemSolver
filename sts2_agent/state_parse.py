@@ -580,6 +580,14 @@ def hand_has_playable_cards(player: dict | None) -> bool:
     return False
 
 
+def is_player_combat_turn(state: dict) -> bool:
+    """True only on the player's turn (not empty/ambiguous turn labels)."""
+    battle = state.get("battle") or {}
+    if battle.get("is_play_phase") is False:
+        return False
+    return str(battle.get("turn") or "").lower() == "player"
+
+
 def combat_awaiting_enemies(state: dict) -> bool:
     """
     True during play phase when targets are temporarily missing (e.g. Phrog split).
@@ -590,7 +598,7 @@ def combat_awaiting_enemies(state: dict) -> bool:
     battle = state.get("battle") or {}
     if battle.get("is_play_phase") is False:
         return False
-    if str(battle.get("turn") or "").lower() != "player":
+    if not is_player_combat_turn(state):
         return False
     if living_enemies(battle):
         return False

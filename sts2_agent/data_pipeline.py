@@ -128,13 +128,21 @@ def _enemy_names_from_state(state: dict) -> list[str]:
 
 
 def extract_deck_card_ids(state: dict) -> list[str]:
-    """Collect deck card IDs from player.deck or all visible piles."""
+    """Collect deck card IDs from run/player deck or all visible piles."""
     player = state.get("player") or {}
+    run = state.get("run") or {}
     deck = player.get("deck")
     if isinstance(deck, list) and deck:
         return [
             _card_id(card) if isinstance(card, dict) else str(card).upper()
             for card in deck
+        ]
+
+    run_deck = run.get("deck")
+    if isinstance(run_deck, list) and run_deck:
+        return [
+            _card_id(card) if isinstance(card, dict) else str(card).upper()
+            for card in run_deck
         ]
 
     seen: set[str] = set()
@@ -329,6 +337,24 @@ def build_state_snapshot(
         )
         snapshot.update(pile_feats)
 
+    if state_type == "map":
+        from sts2_agent.state_parse import (
+            extract_map_choices,
+            map_choice_index,
+            map_choice_room_type,
+        )
+
+        map_choices = []
+        for i, opt in enumerate(extract_map_choices(state)):
+            map_choices.append(
+                {
+                    "index": map_choice_index(opt, i),
+                    "room": map_choice_room_type(opt),
+                }
+            )
+        if map_choices:
+            snapshot["map_choices"] = map_choices
+
     return snapshot
 
 
@@ -382,6 +408,9 @@ class DataPipeline:
         self._combat_enemy_names: list[str] = []
         self._combat_summaries: list[dict[str, Any]] = []
         self._enemy_intent_history: dict[str, list[dict]] = {}
+        self._combat_damage_mult = 1.0
+        self._combat_hp_loss_mult = 0.5
+        self._qwen_strategy_pending = False
 
         DECISIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -452,13 +481,21 @@ class DataPipeline:
             if relics:
                 self._last_relics = relics
 
-        # Combat lifecycle
+        # Combat lifecycle (card_select overlay must not end combat — e.g. Effigy card pick)
+        from sts2_agent.state_parse import is_card_select_active
+
         in_combat_now = state_type in COMBAT_TYPES
+        if self._in_combat and is_card_select_active(state):
+            in_combat_now = True
         if in_combat_now and not self._in_combat:
             self._begin_combat(state)
         elif self._in_combat and in_combat_now:
+            self._maybe_fetch_qwen_strategy(state)
             self._track_enemy_damage(state)
             self._track_enemy_intent_history(state)
+            for name in _enemy_names_from_state(state):
+                if name and name not in self._combat_enemy_names:
+                    self._combat_enemy_names.append(name)
         elif self._in_combat and not in_combat_now:
             self._track_enemy_damage(state)
             self._end_combat(state)
@@ -619,6 +656,24 @@ class DataPipeline:
             state,
             enemy_intent_histories=self._enemy_intent_history,
         )
+        map_choice_options: list[str] | None = None
+        map_room_chosen: str | None = None
+        map_choice_index: int | None = None
+        if state_type.lower() == "map":
+            for choice in snapshot.get("map_choices") or []:
+                if isinstance(choice, dict):
+                    idx = choice.get("index")
+                    room = str(choice.get("room") or "").strip()
+                    if idx is not None and room:
+                        map_choice_options = map_choice_options or []
+                        map_choice_options.append(f"[{idx}] {room}")
+            if action_name == "choose_map_node" and action.get("index") is not None:
+                map_choice_index = int(action["index"])
+                for choice in snapshot.get("map_choices") or []:
+                    if isinstance(choice, dict) and int(choice.get("index", -1)) == map_choice_index:
+                        map_room_chosen = str(choice.get("room") or "").strip() or None
+                        break
+
         card_reward_offered: list[str] | None = None
         if state_type.lower() == "card_reward":
             from sts2_agent.state_parse import (
@@ -651,6 +706,20 @@ class DataPipeline:
         }
         if card_reward_offered:
             record["card_reward_offered"] = card_reward_offered
+        if map_choice_options:
+            record["map_choice_options"] = map_choice_options
+        if map_room_chosen:
+            record["map_room_chosen"] = map_room_chosen
+        if map_choice_index is not None:
+            record["map_choice_index"] = map_choice_index
+
+        from sts2_agent.qwen_macro import pop_macro_qwen_trace
+        from training.ppo_macro import ppo_macro_state_types
+
+        if state_type.lower() in ppo_macro_state_types():
+            trace = pop_macro_qwen_trace()
+            if trace and str(trace.get("state_type") or "").lower() == state_type.lower():
+                record["qwen_macro"] = trace
 
         if state_type.lower() == "card_reward" and action_name == "select_card_reward":
             picked = card_reward_name_for_index(state, action.get("card_index", -1))
@@ -705,7 +774,14 @@ class DataPipeline:
             block_gained = block - self._combat_prev_block
 
         damage_dealt = self._combat_damage_since_decision
-        shaping = combat_turn_shaping(hp_lost, block_gained, damage_dealt)
+        mult = self._current_combat_multipliers()
+        shaping = combat_turn_shaping(
+            hp_lost,
+            block_gained,
+            damage_dealt,
+            damage_mult=mult.damage_mult,
+            hp_loss_mult=mult.hp_loss_mult,
+        )
 
         return {
             "hp_lost_this_turn": hp_lost,
@@ -766,11 +842,64 @@ class DataPipeline:
                 break
         return None
 
+    def _current_combat_multipliers(self):
+        from sts2_agent.qwen_advisor import get_qwen_advisor
+
+        mult = get_qwen_advisor().get_multipliers()
+        self._combat_damage_mult = mult.damage_mult
+        self._combat_hp_loss_mult = mult.hp_loss_mult
+        return mult
+
+    def _ready_for_qwen_strategy(self, state: dict) -> bool:
+        from sts2_agent.qwen_advisor import starter_deck_ids_for_state
+        from sts2_agent.state_parse import is_player_combat_turn
+
+        if not is_player_combat_turn(state):
+            return False
+        if extract_deck_card_ids(state) or self._last_deck:
+            return True
+        hand = (state.get("player") or {}).get("hand") or []
+        if hand:
+            return True
+        return bool(starter_deck_ids_for_state(state))
+
+    def _maybe_fetch_qwen_strategy(self, state: dict) -> None:
+        """Blocking Qwen call once player turn + deck/hand are visible."""
+        from sts2_agent.qwen_advisor import is_qwen_combat_enabled
+
+        if not is_qwen_combat_enabled():
+            self._qwen_strategy_pending = False
+            return
+        if not self._qwen_strategy_pending or not self._in_combat:
+            return
+        if not self._ready_for_qwen_strategy(state):
+            return
+
+        from sts2_agent.qwen_advisor import get_qwen_advisor, starter_deck_ids_for_state
+
+        self._qwen_strategy_pending = False
+        deck_ids = extract_deck_card_ids(state) or list(self._last_deck)
+        if not deck_ids:
+            deck_ids = starter_deck_ids_for_state(state)
+        mult = get_qwen_advisor().begin_fight(
+            state,
+            combat_type=self._combat_state_type,
+            enemy_names=self._combat_enemy_names,
+            deck_card_ids=deck_ids,
+        )
+        self._combat_damage_mult = mult.damage_mult
+        self._combat_hp_loss_mult = mult.hp_loss_mult
+
     def _begin_combat(self, state: dict) -> None:
         from sts2_agent.enemy_compendium import begin_combat_observation
 
         begin_combat_observation()
         self._enemy_intent_history = {}
+        self._combat_damage_mult = 1.0
+        self._combat_hp_loss_mult = 0.5
+        from sts2_agent.qwen_advisor import is_qwen_combat_enabled
+
+        self._qwen_strategy_pending = is_qwen_combat_enabled()
         player = state.get("player") or {}
         self._combat_state_type = str(state.get("state_type") or "").lower()
         self._in_combat = True
@@ -883,19 +1012,48 @@ class DataPipeline:
         reward = combat_reward(start_hp, end_hp, max_hp, won_combat)
         damage_taken = max(0, start_hp - end_hp)
         enemy_names = list(self._combat_enemy_names) or _enemy_names_from_state(state)
+        turns = len(self._combat_decision_indices)
+        if (
+            not enemy_names
+            and turns <= 1
+            and damage_taken == 0
+            and self._combat_damage_dealt_fight == 0
+        ):
+            from sts2_agent.enemy_compendium import finalize_combat_observation
 
-        self._combat_summaries.append(
-            {
-                "enemy_names": enemy_names,
-                "turns": len(self._combat_decision_indices),
-                "damage_taken": damage_taken,
-                "damage_dealt": self._combat_damage_dealt_fight,
-                "hp_start": start_hp,
-                "hp_end": end_hp,
-                "won_fight": won_combat,
-                "state_type": self._combat_state_type,
-            }
-        )
+            finalize_combat_observation(state)
+            self._in_combat = False
+            self._combat_decision_indices = []
+            self._combat_enemy_ids = set()
+            self._enemy_hp_snapshot = {}
+            self._enemy_intent_history = {}
+            self._combat_prev_hp = None
+            self._combat_prev_block = None
+            self._combat_damage_since_decision = 0
+            self._combat_damage_dealt_fight = 0
+            self._combat_enemy_names = []
+            self._qwen_strategy_pending = False
+            return
+
+        from sts2_agent.qwen_advisor import get_qwen_advisor
+
+        qwen_strategy = get_qwen_advisor().end_fight()
+        summary_entry: dict[str, Any] = {
+            "enemy_names": enemy_names,
+            "turns": turns,
+            "damage_taken": damage_taken,
+            "damage_dealt": self._combat_damage_dealt_fight,
+            "hp_start": start_hp,
+            "hp_end": end_hp,
+            "won_fight": won_combat,
+            "state_type": self._combat_state_type,
+        }
+        if qwen_strategy:
+            summary_entry["qwen_strategy"] = qwen_strategy
+        self._combat_summaries.append(summary_entry)
+
+        self._combat_damage_mult = 1.0
+        self._combat_hp_loss_mult = 0.5
 
         self._hp_before_each_combat.append(start_hp)
         self._hp_after_each_combat.append(end_hp)
@@ -922,6 +1080,7 @@ class DataPipeline:
         self._combat_damage_since_decision = 0
         self._combat_damage_dealt_fight = 0
         self._combat_enemy_names = []
+        self._qwen_strategy_pending = False
 
     def _apply_reward_to_indices(self, indices: list[int], total_reward: float) -> None:
         if not indices:
